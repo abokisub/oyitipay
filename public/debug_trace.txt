@@ -1,0 +1,492 @@
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 7.1: Instantiating AirtimeSend...
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 7.2: Dispatching to static Vtpass...
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 7.2: Dispatching to static Vtpass...
+Step 8: Entered AirtimeSend::Vtpass
+Step 9: ServiceID: mtn
+Step 10: Calling OTHERAPI...
+Step 11: OTHERAPI returned: null
+Step 7.3: Dispatch returned.
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 7.2: Dispatching to static Vtpass...
+Step 8: Entered AirtimeSend::Vtpass
+Step 9: ServiceID: mtn
+Step 10: Calling OTHERAPI...
+Step 11: OTHERAPI returned: null
+Step 7.3: Dispatch returned.
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 7.2: Dispatching to static Boltnet (from DB)...
+Step 7.3: Dispatch returned.
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 7.2: Dispatching to static Vtpass (from DB)...
+Step 8: Entered AirtimeSend::Vtpass
+Step 9: ServiceID: mtn
+Step 10: Calling OTHERAPI...
+Step 11: OTHERAPI returned: null
+Step 7.3: Dispatch returned.
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 7: Inserts Success. Calling Sender...
+Step 7.2: Dispatching to static Vtpass (from DB)...
+Step 8: Entered AirtimeSend::Vtpass
+Step 9: ServiceID: mtn
+Step 10: Calling OTHERAPI...
+Step 11: OTHERAPI returned: null
+Step 7.3: Dispatch returned.
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 2
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 3
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 3
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 200
+Step 2: Auth Success
+Step 3: Network Found: 3
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 3
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 200
+Step 2: Auth Success
+Step 3: Network Found: 3
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 2
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 200
+Step 2: Auth Success
+Step 3: Network Found: 3
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 3
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 2
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 2
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 1548a9e5f44efe988174f42fc52ee52b8206c6b235fce58806ca8184ad3e Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 41200e57669915dac3d745b7c4367fbf9e031bb8d18f948f7f778775e878 Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 2
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 41200e57669915dac3d745b7c4367fbf9e031bb8d18f948f7f778775e878 Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 2
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 3
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 4
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 4
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: 8c0b5969a025e08b0fd19bfce49152c09f09f5a2861ffa5fbe4ff79bc26d Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 1: Start. ID: test123 Amount: 100
+Step 1: Start. ID: c18326d32ba94f89f60bafec60ab3458570a0e2393b8cf043d578132962f Amount: 100
+Step 2: Auth Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success
+Step 3: Network Found: 1
+Step 4: Limits Passed
+Step 5: Balance Sufficient
+Step 6: Debit Success

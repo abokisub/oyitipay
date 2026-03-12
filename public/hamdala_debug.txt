@@ -1,0 +1,12 @@
+Payload: {"phone":"07040540018","plan_id":2257,"network_id":1}
+Token: 8cbef073a15b6bcd11c7cc7e18e868c7423af636
+Response: {"status":false,"response":{"code":417,"status":"failed","message":"Expectation Failed"},"desc":"Plan not available: "}
+HTTP Code: 400
+Payload: {"phone":"07040540018","plan_id":2257,"network_id":1}
+Token: 8cbef073a15b6bcd11c7cc7e18e868c7423af636
+Response: {"status":false,"response":{"code":417,"status":"failed","message":"Expectation Failed"},"desc":"Plan not available: "}
+HTTP Code: 400
+Payload: {"phone":"07040540018","plan_id":2307,"network_id":1}
+Token: 8cbef073a15b6bcd11c7cc7e18e868c7423af636
+Response: {"status":true,"response":{"code":200,"status":"successful","message":"Transaction Successfully logged","date_time":"Jan. 25, 2026, 07:43 pm"},"desc":"MTN SME DATA OF 500MB TO 07040540018 via API","reference":"REF_6774491715947904811277871","rtr":"Y\\'ello! You have gifted 500MB to 2347040540018. Share link https:\/\/mtnapp.page.link\/myMTNNGApp with 2347040540018 to download the new MyMTN app for exciting offers."}
+HTTP Code: 200

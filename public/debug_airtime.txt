@@ -1,0 +1,6 @@
+Attempting VTPass Airtime. ServiceID: airtel
+VTPass Response: {"code":"000","content":{"transactions":{"status":"delivered","product_name":"Airtel Airtime VTU","unique_element":"08011111111","unit_price":"100","quantity":1,"service_verification":null,"channel":"api","commission":3,"total_amount":97,"discount":null,"type":"Airtime Recharge","email":"kobopointng@gmail.com","phone":"07040540018","name":null,"convinience_fee":0,"amount":"100","platform":"api","method":"api","transactionId":"17698011069782448699749254","commission_details":{"amount":3,"rate":"3.00","rate_type":"percent","computation_type":"default"}}},"response_description":"TRANSACTION SUCCESSFUL","requestId":"2026013020251aca036f","amount":100,"transaction_date":"2026-01-30T19:25:06.000000Z","purchased_code":""}
+Attempting VTPass Airtime. ServiceID: mtn
+VTPass Response: null
+Attempting VTPass Airtime. ServiceID: glo
+VTPass Response: null
