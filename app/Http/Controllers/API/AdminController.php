@@ -615,11 +615,7 @@ class AdminController extends Controller
                             $user->about = $request->about;
                             $user->address = $request->address;
                             $user->profile_image = $path;
-                            $user->sterlen = $request->sterlen;
-                            $user->wema = $request->wema;
-                            $user->kolomoni_mfb = $request->kolomoni_mfb;
-                            $user->fed = $request->fed;
-                            $user->otp = $request->otp;
+                            // Removed non-existent columns: sterlen, wema, kolomoni_mfb, fed, otp
                             $user->Update();
                             if ($user != null) {
                                 $general = $this->general();
@@ -1406,10 +1402,7 @@ class AdminController extends Controller
                                 $id = $user_id->id;
                                 $data = [
                                     'autofund' => null,
-                                    'wema' => null,
-                                    'kolomoni_mfb' => null,
-                                    'sterlen' => null,
-                                    'fed' => null
+                                    // Removed non-existent columns: wema, kolomoni_mfb, sterlen, fed
                                 ];
                                 $updated = $this->updateData($data, 'user', ['id' => $id]);
                                 if ($updated || $updated === 0) {
@@ -2906,14 +2899,14 @@ class AdminController extends Controller
                     $search = strtolower($request->search);
                     if (!empty($search)) {
                         return response()->json([
-                            'autobank' => DB::table('user')->where('autofund', 'ACTIVE')->select('id', 'username', 'profile_image', 'wema', 'kolomoni_mfb', 'sterlen', 'fed', 'bal', 'refbal', 'status')->orderBy('id', 'desc')->where(function ($query) use ($search) {
+                            'autobank' => DB::table('user')->where('autofund', 'ACTIVE')->select('id', 'username', 'profile_image', 'bal', 'refbal', 'status')->orderBy('id', 'desc')->where(function ($query) use ($search) {
                             $query->orWhere('username', 'LIKE', "%$search%")->orWhere('name', 'LIKE', "%$search%")->orWhere('email', 'LIKE', "%$search%")->orWhere('date', 'LIKE', "%$search%")->orWhere('phone', 'LIKE', "%$search%")->orWhere('pin', 'LIKE', "%$search%")->orWhere('type', 'LIKE', "%$search%");
                         })->paginate($request->adex),
                         ]);
                     }
                     else {
                         return response()->json([
-                            'autobank' => DB::table('user')->where('autofund', 'ACTIVE')->select('id', 'username', 'profile_image', 'wema', 'kolomoni_mfb', 'sterlen', 'fed', 'bal', 'refbal', 'status')->orderBy('id', 'desc')->paginate($request->adex),
+                            'autobank' => DB::table('user')->where('autofund', 'ACTIVE')->select('id', 'username', 'profile_image', 'bal', 'refbal', 'status')->orderBy('id', 'desc')->paginate($request->adex),
                         ]);
                     }
                 }
