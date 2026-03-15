@@ -312,9 +312,35 @@ class DataSend extends Controller
             $api_website = DB::table('web_api')->first();
             $adex_api = DB::table('adex_api')->first();
             $accessToken = base64_encode($adex_api->adex1_username . ":" . $adex_api->adex1_password);
+            
+            // Format phone number for Adex API (they expect 11 digits Nigerian format)
+            $phone = $sendRequest->plan_phone;
+            \Log::info('Adex1 Data Phone Before Format:', ['original_phone' => $phone]);
+            
+            // Ensure it's 11 digits starting with 0
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3); // Convert 2347040540018 to 07040540018
+            }
+            // If it doesn't start with 0, add it
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone; // Convert 7040540018 to 07040540018
+            }
+            
+            \Log::info('Adex1 Data Phone After Format:', ['formatted_phone' => $phone]);
+            
+            // Use proper Adex network ID (1 for MTN according to Adex docs)
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
             $paypload = array(
-                'network' => $network->habukhan_id,
-                'phone' => $sendRequest->plan_phone,
+                'network' => $adex_network_id,
+                'phone' => $phone,
                 'data_plan' => $dataplan->adex1,
                 'bypass' => true,
                 'request-id' => $data['transid']
@@ -358,9 +384,29 @@ class DataSend extends Controller
             $api_website = DB::table('web_api')->first();
             $adex_api = DB::table('adex_api')->first();
             $accessToken = base64_encode($adex_api->adex2_username . ":" . $adex_api->adex2_password);
+            
+            // Format phone number for Adex API
+            $phone = $sendRequest->plan_phone;
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3);
+            }
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone;
+            }
+            
+            // Use proper Adex network ID
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
             $paypload = array(
-                'network' => $network->habukhan_id,
-                'phone' => $sendRequest->plan_phone,
+                'network' => $adex_network_id,
+                'phone' => $phone,
                 'data_plan' => $dataplan->adex2,
                 'bypass' => true,
                 'request-id' => $data['transid']
@@ -404,9 +450,29 @@ class DataSend extends Controller
             $api_website = DB::table('web_api')->first();
             $adex_api = DB::table('adex_api')->first();
             $accessToken = base64_encode($adex_api->adex3_username . ":" . $adex_api->adex3_password);
+            
+            // Format phone number for Adex API
+            $phone = $sendRequest->plan_phone;
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3);
+            }
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone;
+            }
+            
+            // Use proper Adex network ID
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
             $paypload = array(
-                'network' => $network->habukhan_id,
-                'phone' => $sendRequest->plan_phone,
+                'network' => $adex_network_id,
+                'phone' => $phone,
                 'data_plan' => $dataplan->adex3,
                 'bypass' => true,
                 'request-id' => $data['transid']
@@ -450,9 +516,29 @@ class DataSend extends Controller
             $api_website = DB::table('web_api')->first();
             $adex_api = DB::table('adex_api')->first();
             $accessToken = base64_encode($adex_api->adex4_username . ":" . $adex_api->adex4_password);
+            
+            // Format phone number for Adex API
+            $phone = $sendRequest->plan_phone;
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3);
+            }
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone;
+            }
+            
+            // Use proper Adex network ID
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
             $paypload = array(
-                'network' => $network->habukhan_id,
-                'phone' => $sendRequest->plan_phone,
+                'network' => $adex_network_id,
+                'phone' => $phone,
                 'data_plan' => $dataplan->adex4,
                 'bypass' => true,
                 'request-id' => $data['transid']
@@ -496,9 +582,29 @@ class DataSend extends Controller
             $api_website = DB::table('web_api')->first();
             $adex_api = DB::table('adex_api')->first();
             $accessToken = base64_encode($adex_api->adex5_username . ":" . $adex_api->adex5_password);
+            
+            // Format phone number for Adex API
+            $phone = $sendRequest->plan_phone;
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3);
+            }
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone;
+            }
+            
+            // Use proper Adex network ID
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
             $paypload = array(
-                'network' => $network->habukhan_id,
-                'phone' => $sendRequest->plan_phone,
+                'network' => $adex_network_id,
+                'phone' => $phone,
                 'data_plan' => $dataplan->adex5,
                 'bypass' => true,
                 'request-id' => $data['transid']

@@ -145,6 +145,7 @@ class ApiSending extends Controller
 
     public static function AdexApi($data, $sending_data)
     {
+        // Step 1: Get AccessToken using Basic Authentication
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $data['website_url'] . "/api/user/");
         curl_setopt($ch, CURLOPT_POST, 1);
@@ -156,12 +157,31 @@ class ApiSending extends Controller
                 "Authorization: Basic " . $data['accessToken'] . "",
             ]
         );
+        
+        \Log::info('Adex Auth Request:', [
+            'url' => $data['website_url'] . "/api/user/",
+            'auth_header' => "Basic " . $data['accessToken']
+        ]);
+        
         $json = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        
+        \Log::info('Adex Auth Response:', [
+            'http_code' => $httpcode,
+            'response' => $json
+        ]);
+        
         $decode_adex = (json_decode($json, true));
         if (!empty($decode_adex)) {
             if (isset($decode_adex['AccessToken'])) {
                 $access_token = $decode_adex['AccessToken'];
+                
+                \Log::info('Adex AccessToken obtained:', [
+                    'token' => substr($access_token, 0, 20) . '...'
+                ]);
+                
+                // Step 2: Make the actual API call using the AccessToken
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $data['endpoint']);
                 curl_setopt($ch, CURLOPT_POST, 1);
@@ -172,16 +192,36 @@ class ApiSending extends Controller
                     'Content-Type: application/json'
                 ];
                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                
+                \Log::info('Adex API Request:', [
+                    'url' => $data['endpoint'],
+                    'payload' => $sending_data,
+                    'headers' => $headers
+                ]);
+                
                 $dataapi = curl_exec($ch);
                 $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
+                
+                \Log::info('Adex API Response:', [
+                    'http_code' => $httpcode,
+                    'response' => $dataapi
+                ]);
+                
                 return json_decode($dataapi, true);
 
             } else {
-                return ['status' => 'fail'];
+                \Log::error('Adex Auth Failed: No AccessToken in response', [
+                    'response' => $decode_adex
+                ]);
+                return ['status' => 'fail', 'message' => 'Authentication failed - no AccessToken'];
             }
         } else {
-            return ['status' => 'fail'];
+            \Log::error('Adex Auth Failed: Empty or invalid response', [
+                'http_code' => $httpcode,
+                'raw_response' => $json
+            ]);
+            return ['status' => 'fail', 'message' => 'Authentication failed - empty response'];
         }
     }
 

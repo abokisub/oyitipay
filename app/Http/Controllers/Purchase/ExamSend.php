@@ -338,4 +338,200 @@ class ExamSend extends Controller
             return 'fail';
         }
     }
+
+    public static function Adex1($data)
+    {
+        if (DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $exam_id = DB::table('exam_id')->where('exam_name', $sendRequest->exam_name)->first();
+            $accessToken = base64_encode($adex_api->adex1_username . ":" . $adex_api->adex1_password);
+            $paypload = array(
+                'exam' => $exam_id->plan_id,
+                'quantity' => $sendRequest->quantity
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website1,
+                'endpoint' => $api_website->adex_website1 . "/api/exam/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = $response['pin'];
+                    DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['purchase_code' => $pin]);
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex2($data)
+    {
+        if (DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $exam_id = DB::table('exam_id')->where('exam_name', $sendRequest->exam_name)->first();
+            $accessToken = base64_encode($adex_api->adex2_username . ":" . $adex_api->adex2_password);
+            $paypload = array(
+                'exam' => $exam_id->plan_id,
+                'quantity' => $sendRequest->quantity
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website2,
+                'endpoint' => $api_website->adex_website2 . "/api/exam/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = $response['pin'];
+                    DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['purchase_code' => $pin]);
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex3($data)
+    {
+        if (DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $exam_id = DB::table('exam_id')->where('exam_name', $sendRequest->exam_name)->first();
+            $accessToken = base64_encode($adex_api->adex3_username . ":" . $adex_api->adex3_password);
+            $paypload = array(
+                'exam' => $exam_id->plan_id,
+                'quantity' => $sendRequest->quantity
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website3,
+                'endpoint' => $api_website->adex_website3 . "/api/exam/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = $response['pin'];
+                    DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['purchase_code' => $pin]);
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex4($data)
+    {
+        if (DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $exam_id = DB::table('exam_id')->where('exam_name', $sendRequest->exam_name)->first();
+            $accessToken = base64_encode($adex_api->adex4_username . ":" . $adex_api->adex4_password);
+            $paypload = array(
+                'exam' => $exam_id->plan_id,
+                'quantity' => $sendRequest->quantity
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website4,
+                'endpoint' => $api_website->adex_website4 . "/api/exam/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = $response['pin'];
+                    DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['purchase_code' => $pin]);
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex5($data)
+    {
+        if (DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $exam_id = DB::table('exam_id')->where('exam_name', $sendRequest->exam_name)->first();
+            $accessToken = base64_encode($adex_api->adex5_username . ":" . $adex_api->adex5_password);
+            $paypload = array(
+                'exam' => $exam_id->plan_id,
+                'quantity' => $sendRequest->quantity
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website5,
+                'endpoint' => $api_website->adex_website5 . "/api/exam/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = $response['pin'];
+                    DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['purchase_code' => $pin]);
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
 }

@@ -326,6 +326,326 @@ class DataCardSend extends Controller
         }
     }
 
+    public static function Adex1($data)
+    {
+        if (DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $network = DB::table('network')->where('network', $sendRequest->network)->first();
+            $accessToken = base64_encode($adex_api->adex1_username . ":" . $adex_api->adex1_password);
+            $data_card_plan = DB::table('data_card_plan')->where(['plan_id' => $data['purchase_plan']])->first();
+            $paypload = array(
+                'network' => $network->habukhan_id,
+                'quantity' => $sendRequest->quantity,
+                'plan_type' => $data_card_plan->habukhan1,
+                'card_name' => $sendRequest->card_name,
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website1,
+                'endpoint' => $api_website->adex_website1 . "/api/data_card/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = explode(',', $response['pin']);
+                    $serial = explode(',', $response['serial']);
+                    // store pin for dump
+                    for ($i = 0; $i < count($pin); $i++) {
+                        $load_pin = $pin[$i];
+                        $j = $i;
+                        for ($a = 0; $a < count($serial); $a++) {
+                            $load_serial = $serial[$a];
+                            if ($j == $a) {
+                                if (DB::table('dump_data_card_pin')->where(['network' => $network->network, 'serial' => $load_serial, 'pin' => $load_pin, 'transid' => $sendRequest->transid])->count() == 0) {
+                                    if ((!empty($load_pin)) and (!empty($load_serial))) {
+                                        $store_bulk = [
+                                            'username' => $sendRequest->username,
+                                            'serial' => $load_serial,
+                                            'pin' => $load_pin,
+                                            'network' => $sendRequest->network,
+                                            'date' => $sendRequest->plan_date,
+                                            'transid' => $sendRequest->transid,
+                                        ];
+                                        DB::table('dump_data_card_pin')->insert($store_bulk);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex2($data)
+    {
+        if (DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $network = DB::table('network')->where('network', $sendRequest->network)->first();
+            $accessToken = base64_encode($adex_api->adex2_username . ":" . $adex_api->adex2_password);
+            $data_card_plan = DB::table('data_card_plan')->where(['plan_id' => $data['purchase_plan']])->first();
+            $paypload = array(
+                'network' => $network->habukhan_id,
+                'quantity' => $sendRequest->quantity,
+                'plan_type' => $data_card_plan->habukhan2,
+                'card_name' => $sendRequest->card_name,
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website2,
+                'endpoint' => $api_website->adex_website2 . "/api/data_card/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = explode(',', $response['pin']);
+                    $serial = explode(',', $response['serial']);
+                    // store pin for dump
+                    for ($i = 0; $i < count($pin); $i++) {
+                        $load_pin = $pin[$i];
+                        $j = $i;
+                        for ($a = 0; $a < count($serial); $a++) {
+                            $load_serial = $serial[$a];
+                            if ($j == $a) {
+                                if (DB::table('dump_data_card_pin')->where(['network' => $network->network, 'serial' => $load_serial, 'pin' => $load_pin, 'transid' => $sendRequest->transid])->count() == 0) {
+                                    if ((!empty($load_pin)) and (!empty($load_serial))) {
+                                        $store_bulk = [
+                                            'username' => $sendRequest->username,
+                                            'serial' => $load_serial,
+                                            'pin' => $load_pin,
+                                            'network' => $sendRequest->network,
+                                            'date' => $sendRequest->plan_date,
+                                            'transid' => $sendRequest->transid,
+                                        ];
+                                        DB::table('dump_data_card_pin')->insert($store_bulk);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex3($data)
+    {
+        if (DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $network = DB::table('network')->where('network', $sendRequest->network)->first();
+            $accessToken = base64_encode($adex_api->adex3_username . ":" . $adex_api->adex3_password);
+            $data_card_plan = DB::table('data_card_plan')->where(['plan_id' => $data['purchase_plan']])->first();
+            $paypload = array(
+                'network' => $network->habukhan_id,
+                'quantity' => $sendRequest->quantity,
+                'plan_type' => $data_card_plan->habukhan3,
+                'card_name' => $sendRequest->card_name,
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website3,
+                'endpoint' => $api_website->adex_website3 . "/api/data_card/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = explode(',', $response['pin']);
+                    $serial = explode(',', $response['serial']);
+                    // store pin for dump
+                    for ($i = 0; $i < count($pin); $i++) {
+                        $load_pin = $pin[$i];
+                        $j = $i;
+                        for ($a = 0; $a < count($serial); $a++) {
+                            $load_serial = $serial[$a];
+                            if ($j == $a) {
+                                if (DB::table('dump_data_card_pin')->where(['network' => $network->network, 'serial' => $load_serial, 'pin' => $load_pin, 'transid' => $sendRequest->transid])->count() == 0) {
+                                    if ((!empty($load_pin)) and (!empty($load_serial))) {
+                                        $store_bulk = [
+                                            'username' => $sendRequest->username,
+                                            'serial' => $load_serial,
+                                            'pin' => $load_pin,
+                                            'network' => $sendRequest->network,
+                                            'date' => $sendRequest->plan_date,
+                                            'transid' => $sendRequest->transid,
+                                        ];
+                                        DB::table('dump_data_card_pin')->insert($store_bulk);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex4($data)
+    {
+        if (DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $network = DB::table('network')->where('network', $sendRequest->network)->first();
+            $accessToken = base64_encode($adex_api->adex4_username . ":" . $adex_api->adex4_password);
+            $data_card_plan = DB::table('data_card_plan')->where(['plan_id' => $data['purchase_plan']])->first();
+            $paypload = array(
+                'network' => $network->habukhan_id,
+                'quantity' => $sendRequest->quantity,
+                'plan_type' => $data_card_plan->habukhan4,
+                'card_name' => $sendRequest->card_name,
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website4,
+                'endpoint' => $api_website->adex_website4 . "/api/data_card/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = explode(',', $response['pin']);
+                    $serial = explode(',', $response['serial']);
+                    // store pin for dump
+                    for ($i = 0; $i < count($pin); $i++) {
+                        $load_pin = $pin[$i];
+                        $j = $i;
+                        for ($a = 0; $a < count($serial); $a++) {
+                            $load_serial = $serial[$a];
+                            if ($j == $a) {
+                                if (DB::table('dump_data_card_pin')->where(['network' => $network->network, 'serial' => $load_serial, 'pin' => $load_pin, 'transid' => $sendRequest->transid])->count() == 0) {
+                                    if ((!empty($load_pin)) and (!empty($load_serial))) {
+                                        $store_bulk = [
+                                            'username' => $sendRequest->username,
+                                            'serial' => $load_serial,
+                                            'pin' => $load_pin,
+                                            'network' => $sendRequest->network,
+                                            'date' => $sendRequest->plan_date,
+                                            'transid' => $sendRequest->transid,
+                                        ];
+                                        DB::table('dump_data_card_pin')->insert($store_bulk);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex5($data)
+    {
+        if (DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $network = DB::table('network')->where('network', $sendRequest->network)->first();
+            $accessToken = base64_encode($adex_api->adex5_username . ":" . $adex_api->adex5_password);
+            $data_card_plan = DB::table('data_card_plan')->where(['plan_id' => $data['purchase_plan']])->first();
+            $paypload = array(
+                'network' => $network->habukhan_id,
+                'quantity' => $sendRequest->quantity,
+                'plan_type' => $data_card_plan->habukhan5,
+                'card_name' => $sendRequest->card_name,
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website5,
+                'endpoint' => $api_website->adex_website5 . "/api/data_card/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $pin = explode(',', $response['pin']);
+                    $serial = explode(',', $response['serial']);
+                    // store pin for dump
+                    for ($i = 0; $i < count($pin); $i++) {
+                        $load_pin = $pin[$i];
+                        $j = $i;
+                        for ($a = 0; $a < count($serial); $a++) {
+                            $load_serial = $serial[$a];
+                            if ($j == $a) {
+                                if (DB::table('dump_data_card_pin')->where(['network' => $network->network, 'serial' => $load_serial, 'pin' => $load_pin, 'transid' => $sendRequest->transid])->count() == 0) {
+                                    if ((!empty($load_pin)) and (!empty($load_serial))) {
+                                        $store_bulk = [
+                                            'username' => $sendRequest->username,
+                                            'serial' => $load_serial,
+                                            'pin' => $load_pin,
+                                            'network' => $sendRequest->network,
+                                            'date' => $sendRequest->plan_date,
+                                            'transid' => $sendRequest->transid,
+                                        ];
+                                        DB::table('dump_data_card_pin')->insert($store_bulk);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    $plan_status = 'fail';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
     public static function Self($data)
     {
         if (DB::table('data_card')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {

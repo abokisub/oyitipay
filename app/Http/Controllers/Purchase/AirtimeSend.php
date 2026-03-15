@@ -995,4 +995,377 @@ class AirtimeSend extends Controller
             return 'fail';
         }
     }
+
+    public static function Adex1($data)
+    {
+        if (DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $network = DB::table('network')->where(['network' => $sendRequest->network])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex1_username . ":" . $adex_api->adex1_password);
+            
+            // Format phone number for Adex API (they expect 11 digits Nigerian format)
+            $phone = $sendRequest->plan_phone;
+            \Log::info('Adex1 Phone Before Format:', ['original_phone' => $phone]);
+            
+            // Ensure it's 11 digits starting with 0
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3); // Convert 2347040540018 to 07040540018
+            }
+            // If it doesn't start with 0, add it
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone; // Convert 7040540018 to 07040540018
+            }
+            
+            \Log::info('Adex1 Phone After Format:', ['formatted_phone' => $phone]);
+            
+            // Use proper Adex network ID (1 for MTN according to Adex docs)
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
+            $paypload = array(
+                'network' => $adex_network_id,
+                'phone' => $phone,
+                'plan_type' => 'VTU', // Required by Adex API
+                'amount' => $sendRequest->amount,
+                'bypass' => false, // Set to false as per Adex docs
+                'request-id' => $data['transid']
+            );
+            
+            $admin_details = [
+                'website_url' => $api_website->adex_website1,
+                'endpoint' => $api_website->adex_website1 . "/api/topup/",
+                'accessToken' => $accessToken
+            ];
+            
+            // Log the payload for debugging
+            \Log::info('Adex1 Airtime Request:', [
+                'payload' => $paypload,
+                'endpoint' => $admin_details['endpoint']
+            ]);
+            
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            
+            // Log the response for debugging
+            \Log::info('Adex1 Airtime Response:', ['response' => $response]);
+            
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex2($data)
+    {
+        if (DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $network = DB::table('network')->where(['network' => $sendRequest->network])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex2_username . ":" . $adex_api->adex2_password);
+            
+            // Format phone number for Adex API (they expect 11 digits Nigerian format)
+            $phone = $sendRequest->plan_phone;
+            \Log::info('Adex2 Phone Before Format:', ['original_phone' => $phone]);
+            
+            // Ensure it's 11 digits starting with 0
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3);
+            }
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone;
+            }
+            
+            \Log::info('Adex2 Phone After Format:', ['formatted_phone' => $phone]);
+            
+            // Use proper Adex network ID (1 for MTN according to Adex docs)
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
+            $paypload = array(
+                'network' => $adex_network_id,
+                'phone' => $phone,
+                'plan_type' => 'VTU',
+                'amount' => $sendRequest->amount,
+                'bypass' => false,
+                'request-id' => $data['transid']
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website2,
+                'endpoint' => $api_website->adex_website2 . "/api/topup/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex3($data)
+    {
+        if (DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $network = DB::table('network')->where(['network' => $sendRequest->network])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex3_username . ":" . $adex_api->adex3_password);
+            
+            // Format phone number for Adex API (they expect 11 digits Nigerian format)
+            $phone = $sendRequest->plan_phone;
+            \Log::info('Adex3 Phone Before Format:', ['original_phone' => $phone]);
+            
+            // Ensure it's 11 digits starting with 0
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3);
+            }
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone;
+            }
+            
+            \Log::info('Adex3 Phone After Format:', ['formatted_phone' => $phone]);
+            
+            // Use proper Adex network ID (1 for MTN according to Adex docs)
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
+            $paypload = array(
+                'network' => $adex_network_id,
+                'phone' => $phone,
+                'plan_type' => 'VTU',
+                'amount' => $sendRequest->amount,
+                'bypass' => false,
+                'request-id' => $data['transid']
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website3,
+                'endpoint' => $api_website->adex_website3 . "/api/topup/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex4($data)
+    {
+        if (DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $network = DB::table('network')->where(['network' => $sendRequest->network])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex4_username . ":" . $adex_api->adex4_password);
+            
+            // Format phone number for Adex API (they expect 11 digits Nigerian format)
+            $phone = $sendRequest->plan_phone;
+            \Log::info('Adex4 Phone Before Format:', ['original_phone' => $phone]);
+            
+            // Ensure it's 11 digits starting with 0
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3);
+            }
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone;
+            }
+            
+            \Log::info('Adex4 Phone After Format:', ['formatted_phone' => $phone]);
+            
+            // Use proper Adex network ID (1 for MTN according to Adex docs)
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
+            $paypload = array(
+                'network' => $adex_network_id,
+                'phone' => $phone,
+                'plan_type' => 'VTU',
+                'amount' => $sendRequest->amount,
+                'bypass' => false,
+                'request-id' => $data['transid']
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website4,
+                'endpoint' => $api_website->adex_website4 . "/api/topup/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex5($data)
+    {
+        if (DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $network = DB::table('network')->where(['network' => $sendRequest->network])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex5_username . ":" . $adex_api->adex5_password);
+            
+            // Format phone number for Adex API (they expect 11 digits Nigerian format)
+            $phone = $sendRequest->plan_phone;
+            \Log::info('Adex5 Phone Before Format:', ['original_phone' => $phone]);
+            
+            // Ensure it's 11 digits starting with 0
+            if (substr($phone, 0, 3) == '234') {
+                $phone = '0' . substr($phone, 3);
+            }
+            if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
+                $phone = '0' . $phone;
+            }
+            
+            \Log::info('Adex5 Phone After Format:', ['formatted_phone' => $phone]);
+            
+            // Use proper Adex network ID (1 for MTN according to Adex docs)
+            $adex_network_id = 1; // Default to MTN
+            if (strtoupper($sendRequest->network) == 'AIRTEL') {
+                $adex_network_id = 2;
+            } elseif (strtoupper($sendRequest->network) == 'GLO') {
+                $adex_network_id = 3;
+            } elseif (strtoupper($sendRequest->network) == '9MOBILE') {
+                $adex_network_id = 4;
+            }
+            
+            $paypload = array(
+                'network' => $adex_network_id,
+                'phone' => $phone,
+                'plan_type' => 'VTU',
+                'amount' => $sendRequest->amount,
+                'bypass' => false,
+                'request-id' => $data['transid']
+            );
+            $admin_details = [
+                'website_url' => $api_website->adex_website5,
+                'endpoint' => $api_website->adex_website5 . "/api/topup/",
+                'accessToken' => $accessToken
+            ];
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('airtime')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
 }

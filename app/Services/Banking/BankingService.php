@@ -33,12 +33,18 @@ class BankingService
     /**
      * Get the currently active primary transfer provider.
      * Uses PointWave as the primary provider for transfers.
+     * Falls back to Xixapay if PointWave is unavailable.
      */
     public function getActiveProvider(): BankingProviderInterface
     {
         // Check settings for preferred provider
         $settings = DB::table('settings')->first();
         $preferredProvider = $settings->transfer_provider ?? 'pointwave';
+        
+        // Allow Xixapay as alternative provider
+        if ($preferredProvider === 'xixapay') {
+            return new XixapayProvider();
+        }
         
         // Enforce PointWave as default
         if ($preferredProvider === 'pointwave' || empty($preferredProvider)) {

@@ -401,4 +401,348 @@ class BillSend extends Controller
             return 'fail';
         }
     }
+
+    public static function Adex1($data)
+    {
+        if (DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $bill_plan = DB::table('bill_plan')->where('plan_id', $data['plan_id'])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex1_username . ":" . $adex_api->adex1_password);
+            
+            $paypload = array(
+                'disco' => $bill_plan->adex1 ?? $bill_plan->habukhan1, // Fallback to habukhan1 if adex1 not set
+                'meter_number' => $sendRequest->meter_number,
+                'meter_type' => strtolower($sendRequest->meter_type),
+                'amount' => $sendRequest->amount,
+                'bypass' => false, // Set to false as per Adex docs
+                'request-id' => $data['transid']
+            );
+
+            $admin_details = [
+                'website_url' => $api_website->adex_website1,
+                'endpoint' => $api_website->adex_website1 . "/api/bill",
+                'accessToken' => $accessToken
+            ];
+            
+            \Log::info('Adex1 Bill Request:', [
+                'payload' => $paypload,
+                'endpoint' => $admin_details['endpoint']
+            ]);
+            
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            
+            \Log::info('Adex1 Bill Response:', ['response' => $response]);
+            
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    // Extract and save token from response
+                    $tokenToSave = null;
+                    if (!empty($response['token']))
+                        $tokenToSave = $response['token'];
+                    elseif (!empty($response['purchased_code']))
+                        $tokenToSave = $response['purchased_code'];
+                    elseif (!empty($response['pin']))
+                        $tokenToSave = $response['pin'];
+                    elseif (!empty($response['Pin']))
+                        $tokenToSave = $response['Pin'];
+                    elseif (!empty($response['mainToken']))
+                        $tokenToSave = $response['mainToken'];
+
+                    if ($tokenToSave) {
+                        DB::table('bill')->where(['username' => $sendRequest->username, 'transid' => $sendRequest->transid])->update(['token' => $tokenToSave]);
+                    }
+                    
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex2($data)
+    {
+        if (DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $bill_plan = DB::table('bill_plan')->where('plan_id', $data['plan_id'])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex2_username . ":" . $adex_api->adex2_password);
+            
+            $paypload = array(
+                'disco' => $bill_plan->adex2 ?? $bill_plan->habukhan2,
+                'meter_number' => $sendRequest->meter_number,
+                'meter_type' => strtolower($sendRequest->meter_type),
+                'amount' => $sendRequest->amount,
+                'bypass' => false,
+                'request-id' => $data['transid']
+            );
+
+            $admin_details = [
+                'website_url' => $api_website->adex_website2,
+                'endpoint' => $api_website->adex_website2 . "/api/bill",
+                'accessToken' => $accessToken
+            ];
+            
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $tokenToSave = null;
+                    if (!empty($response['token']))
+                        $tokenToSave = $response['token'];
+                    elseif (!empty($response['purchased_code']))
+                        $tokenToSave = $response['purchased_code'];
+                    elseif (!empty($response['pin']))
+                        $tokenToSave = $response['pin'];
+                    elseif (!empty($response['Pin']))
+                        $tokenToSave = $response['Pin'];
+                    elseif (!empty($response['mainToken']))
+                        $tokenToSave = $response['mainToken'];
+
+                    if ($tokenToSave) {
+                        DB::table('bill')->where(['username' => $sendRequest->username, 'transid' => $sendRequest->transid])->update(['token' => $tokenToSave]);
+                    }
+                    
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex3($data)
+    {
+        if (DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $bill_plan = DB::table('bill_plan')->where('plan_id', $data['plan_id'])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex3_username . ":" . $adex_api->adex3_password);
+            
+            $paypload = array(
+                'disco' => $bill_plan->adex3 ?? $bill_plan->habukhan3,
+                'meter_number' => $sendRequest->meter_number,
+                'meter_type' => strtolower($sendRequest->meter_type),
+                'amount' => $sendRequest->amount,
+                'bypass' => false,
+                'request-id' => $data['transid']
+            );
+
+            $admin_details = [
+                'website_url' => $api_website->adex_website3,
+                'endpoint' => $api_website->adex_website3 . "/api/bill",
+                'accessToken' => $accessToken
+            ];
+            
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $tokenToSave = null;
+                    if (!empty($response['token']))
+                        $tokenToSave = $response['token'];
+                    elseif (!empty($response['purchased_code']))
+                        $tokenToSave = $response['purchased_code'];
+                    elseif (!empty($response['pin']))
+                        $tokenToSave = $response['pin'];
+                    elseif (!empty($response['Pin']))
+                        $tokenToSave = $response['Pin'];
+                    elseif (!empty($response['mainToken']))
+                        $tokenToSave = $response['mainToken'];
+
+                    if ($tokenToSave) {
+                        DB::table('bill')->where(['username' => $sendRequest->username, 'transid' => $sendRequest->transid])->update(['token' => $tokenToSave]);
+                    }
+                    
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex4($data)
+    {
+        if (DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $bill_plan = DB::table('bill_plan')->where('plan_id', $data['plan_id'])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex4_username . ":" . $adex_api->adex4_password);
+            
+            $paypload = array(
+                'disco' => $bill_plan->adex4 ?? $bill_plan->habukhan4,
+                'meter_number' => $sendRequest->meter_number,
+                'meter_type' => strtolower($sendRequest->meter_type),
+                'amount' => $sendRequest->amount,
+                'bypass' => false,
+                'request-id' => $data['transid']
+            );
+
+            $admin_details = [
+                'website_url' => $api_website->adex_website4,
+                'endpoint' => $api_website->adex_website4 . "/api/bill",
+                'accessToken' => $accessToken
+            ];
+            
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $tokenToSave = null;
+                    if (!empty($response['token']))
+                        $tokenToSave = $response['token'];
+                    elseif (!empty($response['purchased_code']))
+                        $tokenToSave = $response['purchased_code'];
+                    elseif (!empty($response['pin']))
+                        $tokenToSave = $response['pin'];
+                    elseif (!empty($response['Pin']))
+                        $tokenToSave = $response['Pin'];
+                    elseif (!empty($response['mainToken']))
+                        $tokenToSave = $response['mainToken'];
+
+                    if ($tokenToSave) {
+                        DB::table('bill')->where(['username' => $sendRequest->username, 'transid' => $sendRequest->transid])->update(['token' => $tokenToSave]);
+                    }
+                    
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
+    public static function Adex5($data)
+    {
+        if (DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
+            $sendRequest = DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
+            $bill_plan = DB::table('bill_plan')->where('plan_id', $data['plan_id'])->first();
+            $api_website = DB::table('web_api')->first();
+            $adex_api = DB::table('adex_api')->first();
+            $accessToken = base64_encode($adex_api->adex5_username . ":" . $adex_api->adex5_password);
+            
+            $paypload = array(
+                'disco' => $bill_plan->adex5 ?? $bill_plan->habukhan5,
+                'meter_number' => $sendRequest->meter_number,
+                'meter_type' => strtolower($sendRequest->meter_type),
+                'amount' => $sendRequest->amount,
+                'bypass' => false,
+                'request-id' => $data['transid']
+            );
+
+            $admin_details = [
+                'website_url' => $api_website->adex_website5,
+                'endpoint' => $api_website->adex_website5 . "/api/bill",
+                'accessToken' => $accessToken
+            ];
+            
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            
+            if (!empty($response)) {
+                if ($response['status'] == 'success') {
+                    $tokenToSave = null;
+                    if (!empty($response['token']))
+                        $tokenToSave = $response['token'];
+                    elseif (!empty($response['purchased_code']))
+                        $tokenToSave = $response['purchased_code'];
+                    elseif (!empty($response['pin']))
+                        $tokenToSave = $response['pin'];
+                    elseif (!empty($response['Pin']))
+                        $tokenToSave = $response['Pin'];
+                    elseif (!empty($response['mainToken']))
+                        $tokenToSave = $response['mainToken'];
+
+                    if ($tokenToSave) {
+                        DB::table('bill')->where(['username' => $sendRequest->username, 'transid' => $sendRequest->transid])->update(['token' => $tokenToSave]);
+                    }
+                    
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'success';
+                } else if ($response['status'] == 'fail') {
+                    if (isset($response['response'])) {
+                        DB::table('bill')->where(['username' => $data['username'], 'transid' => $data['transid']])->update(['api_response' => $response['response']]);
+                    }
+                    $plan_status = 'fail';
+                } else if ($response['status'] == 'process') {
+                    $plan_status = 'process';
+                } else {
+                    $plan_status = 'process';
+                }
+            } else {
+                $plan_status = null;
+            }
+            return $plan_status;
+        } else {
+            return 'fail';
+        }
+    }
+
 }
