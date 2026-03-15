@@ -199,25 +199,36 @@ class ProcessPointWaveWebhook implements ShouldQueue
         
         if ($settings) {
             $chargeType = strtoupper($settings->pointwave_charge_type ?? '');
+            $chargeValue = floatval($settings->pointwave_charge_value ?? 0);
             
-            if ($chargeType === 'PERCENTAGE') {
-                // Calculate percentage fee
-                $feePercent = floatval($settings->pointwave_charge_value ?? 0);
-                $feeCap = floatval($settings->pointwave_charge_cap ?? 0);
-                $kobopointFee = ($amount * $feePercent) / 100;
-                
-                // Apply cap if set
-                if ($feeCap > 0 && $kobopointFee > $feeCap) {
-                    $kobopointFee = $feeCap;
+            // Only apply platform charges if admin has set a charge > 0
+            if ($chargeValue > 0) {
+                if ($chargeType === 'PERCENTAGE') {
+                    // Calculate percentage fee on the original amount (before PointWave fee)
+                    $feeCap = floatval($settings->pointwave_charge_cap ?? 0);
+                    $kobopointFee = ($amount * $chargeValue) / 100;
+                    
+                    // Apply cap if set
+                    if ($feeCap > 0 && $kobopointFee > $feeCap) {
+                        $kobopointFee = $feeCap;
+                    }
+                } elseif ($chargeType === 'FLAT') {
+                    // Flat fee
+                    $kobopointFee = $chargeValue;
                 }
-            } elseif ($chargeType === 'FLAT') {
-                // Flat fee
-                $kobopointFee = floatval($settings->pointwave_charge_value ?? 0);
             }
+            // If admin sets charge to 0.0, kobopointFee remains 0
         }
         
-        // Final amount to credit user (after both PointWave and Kobopoint fees)
+        // Final amount calculation:
+        // - If admin charge is 0.0: Credit full net_amount (amount - pointwave_fee)
+        // - If admin charge > 0: Credit net_amount - platform_fee
         $finalAmount = $netAmount - $kobopointFee;
+        
+        // Ensure we don't credit negative amounts
+        if ($finalAmount < 0) {
+            $finalAmount = 0;
+        }
 
         DB::beginTransaction();
 
@@ -230,7 +241,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 'user_id' => $user->id,
                 'type' => 'deposit',
                 'amount' => $amount,
-                'fee' => $fee + $kobopointFee, // Total fee (PointWave + Kobopoint)
+                'fee' => $fee + $kobopointFee, // Total fee (PointWave + Platform)
                 'status' => 'completed',
                 'reference' => $reference,
                 'pointwave_transaction_id' => $transactionId,
@@ -239,11 +250,19 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 'metadata' => json_encode($transactionData),
             ]);
 
+            // Create message for transaction history with clear fee breakdown
+            $feeMessage = '';
+            if ($kobopointFee > 0) {
+                $feeMessage = sprintf(' (PointWave Fee: ₦%.2f, Platform Fee: ₦%.2f)', $fee, $kobopointFee);
+            } else {
+                $feeMessage = sprintf(' (PointWave Fee: ₦%.2f)', $fee);
+            }
+
             // Also create transaction in message table for transaction history
             DB::table('message')->insert([
                 'username' => $user->username,
                 'amount' => $finalAmount,
-                'message' => sprintf('Wallet Funded via PointWave (Fee: ₦%.2f)', $kobopointFee),
+                'message' => 'Wallet Funded via PointWave' . $feeMessage,
                 'oldbal' => $user->bal - $finalAmount,
                 'newbal' => $user->bal,
                 'habukhan_date' => now(),
@@ -285,10 +304,12 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 'user_id' => $user->id,
                 'gross_amount' => $amount,
                 'pointwave_fee' => $fee,
-                'kobopoint_fee' => $kobopointFee,
-                'final_amount' => $finalAmount,
+                'platform_fee' => $kobopointFee,
+                'net_from_pointwave' => $netAmount,
+                'final_credited_amount' => $finalAmount,
                 'transaction_id' => $transactionId,
-                'new_balance' => $user->bal
+                'new_balance' => $user->bal,
+                'admin_charge_setting' => $settings->pointwave_charge_value ?? 0
             ]);
 
         } catch (\Exception $e) {

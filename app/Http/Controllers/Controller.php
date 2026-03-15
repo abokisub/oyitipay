@@ -715,6 +715,9 @@ class Controller extends BaseController
     /**
      * Calculate PointWave deposit charge
      * 
+     * Note: This calculates YOUR platform's charge on PointWave deposits.
+     * PointWave will ALWAYS deduct their own fees on their end regardless of this setting.
+     * 
      * @param float $amount Deposit amount
      * @return array ['charge' => float, 'net_amount' => float, 'type' => string, 'cap_applied' => bool]
      */
@@ -731,24 +734,28 @@ class Controller extends BaseController
         $charge = 0;
         $capApplied = false;
 
-        if ($chargeType === 'PERCENTAGE') {
-            // Calculate percentage charge
-            $charge = ($amount * $chargeValue) / 100;
-            
-            // Apply cap if set and charge exceeds cap
-            if ($chargeCap > 0 && $charge > $chargeCap) {
-                $charge = $chargeCap;
-                $capApplied = true;
+        // Only calculate platform charges if admin has set a charge > 0
+        if ($chargeValue > 0) {
+            if ($chargeType === 'PERCENTAGE') {
+                // Calculate percentage charge
+                $charge = ($amount * $chargeValue) / 100;
+                
+                // Apply cap if set and charge exceeds cap
+                if ($chargeCap > 0 && $charge > $chargeCap) {
+                    $charge = $chargeCap;
+                    $capApplied = true;
+                }
+            } else {
+                // FLAT charge
+                $charge = $chargeValue;
             }
-        } else {
-            // FLAT charge
-            $charge = $chargeValue;
-        }
 
-        // Ensure charge doesn't exceed deposit amount
-        if ($charge > $amount) {
-            $charge = $amount;
+            // Ensure charge doesn't exceed deposit amount
+            if ($charge > $amount) {
+                $charge = $amount;
+            }
         }
+        // If chargeValue is 0, charge remains 0 (no platform fee)
 
         $netAmount = $amount - $charge;
 
@@ -758,7 +765,8 @@ class Controller extends BaseController
             'type' => $chargeType,
             'cap_applied' => $capApplied,
             'charge_value' => $chargeValue,
-            'charge_cap' => $chargeCap
+            'charge_cap' => $chargeCap,
+            'note' => $chargeValue == 0 ? 'No platform charge (PointWave fees still apply on their end)' : 'Platform charge applied'
         ];
     }
 }
