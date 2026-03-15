@@ -196,15 +196,29 @@ class ProcessPointWaveWebhook implements ShouldQueue
         // Get platform charge settings
         $settings = DB::table('settings')->first();
         $kobopointFee = 0;
+        $finalAmount = 0;
         
         if ($settings) {
             $chargeType = strtoupper($settings->pointwave_charge_type ?? '');
             $chargeValue = floatval($settings->pointwave_charge_value ?? 0);
             
-            // Only apply platform charges if admin has set a charge > 0
-            if ($chargeValue > 0) {
+            if ($chargeValue == 0) {
+                // MARKETING STRATEGY: FREE DEPOSITS
+                // When admin sets 0.0%, customer gets full deposit amount
+                // Business absorbs PointWave fees as marketing cost
+                $finalAmount = $amount; // Customer gets full ₦100
+                $kobopointFee = 0; // No fee charged to customer
+                
+                Log::info('Free deposit strategy applied', [
+                    'customer_deposit' => $amount,
+                    'customer_credited' => $finalAmount,
+                    'pointwave_fee_absorbed' => $fee,
+                    'business_cost' => $fee
+                ]);
+            } else {
+                // NORMAL CHARGING: Platform fee applies
                 if ($chargeType === 'PERCENTAGE') {
-                    // Calculate percentage fee on the original amount (before PointWave fee)
+                    // Calculate percentage fee on the original amount
                     $feeCap = floatval($settings->pointwave_charge_cap ?? 0);
                     $kobopointFee = ($amount * $chargeValue) / 100;
                     
@@ -216,14 +230,21 @@ class ProcessPointWaveWebhook implements ShouldQueue
                     // Flat fee
                     $kobopointFee = $chargeValue;
                 }
+                
+                // Customer pays platform fee, gets net amount
+                $finalAmount = $amount - $kobopointFee;
+                
+                Log::info('Platform fee applied', [
+                    'customer_deposit' => $amount,
+                    'platform_fee' => $kobopointFee,
+                    'customer_credited' => $finalAmount,
+                    'pointwave_fee' => $fee
+                ]);
             }
-            // If admin sets charge to 0.0, kobopointFee remains 0
+        } else {
+            // No settings found, default to free deposits
+            $finalAmount = $amount;
         }
-        
-        // Final amount calculation:
-        // - If admin charge is 0.0: Credit full net_amount (amount - pointwave_fee)
-        // - If admin charge > 0: Credit net_amount - platform_fee
-        $finalAmount = $netAmount - $kobopointFee;
         
         // Ensure we don't credit negative amounts
         if ($finalAmount < 0) {
@@ -237,25 +258,28 @@ class ProcessPointWaveWebhook implements ShouldQueue
             $user->increment('bal', $finalAmount);
 
             // Create transaction record in pointwave_transactions table
+            // Note: fee field shows what customer was charged (0 for free deposits)
             PointWaveTransaction::create([
                 'user_id' => $user->id,
                 'type' => 'deposit',
                 'amount' => $amount,
-                'fee' => $fee + $kobopointFee, // Total fee (PointWave + Platform)
+                'fee' => $kobopointFee, // Only customer-facing fee (0 for free deposits)
                 'status' => 'completed',
                 'reference' => $reference,
                 'pointwave_transaction_id' => $transactionId,
                 'pointwave_customer_id' => $customerId,
                 'description' => 'Deposit via PointWave',
-                'metadata' => json_encode($transactionData),
+                'metadata' => json_encode(array_merge($transactionData, [
+                    'business_absorbed_fee' => $settings && floatval($settings->pointwave_charge_value ?? 0) == 0 ? $fee : 0
+                ])),
             ]);
 
-            // Create message for transaction history with clear fee breakdown
+            // Create message for transaction history
             $feeMessage = '';
             if ($kobopointFee > 0) {
-                $feeMessage = sprintf(' (PointWave Fee: ₦%.2f, Platform Fee: ₦%.2f)', $fee, $kobopointFee);
+                $feeMessage = sprintf(' (Fee: ₦%.2f)', $kobopointFee);
             } else {
-                $feeMessage = sprintf(' (PointWave Fee: ₦%.2f)', $fee);
+                $feeMessage = ' (Free Deposit)';
             }
 
             // Also create transaction in message table for transaction history
@@ -268,7 +292,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 'habukhan_date' => now(),
                 'plan_status' => 1,
                 'transid' => $transactionId,
-                'role' => 'credit' // Changed from 'pointwave_deposit' to 'credit' for mobile app Money IN display
+                'role' => 'credit'
             ]);
 
             DB::commit();
@@ -300,16 +324,17 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 }
             }
 
-            Log::info('User wallet credited from PointWave', [
+            Log::info('PointWave deposit processed', [
                 'user_id' => $user->id,
-                'gross_amount' => $amount,
+                'customer_deposit' => $amount,
                 'pointwave_fee' => $fee,
-                'platform_fee' => $kobopointFee,
-                'net_from_pointwave' => $netAmount,
-                'final_credited_amount' => $finalAmount,
+                'platform_fee_charged' => $kobopointFee,
+                'customer_credited' => $finalAmount,
                 'transaction_id' => $transactionId,
                 'new_balance' => $user->bal,
-                'admin_charge_setting' => $settings->pointwave_charge_value ?? 0
+                'admin_charge_setting' => $settings->pointwave_charge_value ?? 0,
+                'free_deposit_strategy' => ($settings && floatval($settings->pointwave_charge_value ?? 0) == 0),
+                'business_absorbed_cost' => ($settings && floatval($settings->pointwave_charge_value ?? 0) == 0) ? $fee : 0
             ]);
 
         } catch (\Exception $e) {
