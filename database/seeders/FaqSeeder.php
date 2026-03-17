@@ -15,8 +15,8 @@ class FaqSeeder extends Seeder
     {
         \DB::table('faqs')->insert([
             [
-                'question' => 'What is Amtpay?',
-                'answer' => 'Amtpay is a secure digital wallet and payment platform that allows you to manage your finances, pay bills, and send money with ease.',
+                'question' => 'What is OyitiPay?',
+                'answer' => 'OyitiPay is a secure digital wallet and payment platform that allows you to manage your finances, pay bills, buy airtime and data, and send money with ease.',
                 'category' => 'General',
                 'status' => 1,
                 'created_at' => now(),
@@ -24,7 +24,7 @@ class FaqSeeder extends Seeder
             ],
             [
                 'question' => 'How do I fund my wallet?',
-                'answer' => 'You can fund your wallet via bank transfer, USSD, or credit/debit card. Navigate to the "Fund Wallet" section on your dashboard for more details.',
+                'answer' => 'You can fund your wallet via bank transfer to your virtual account, USSD, or card payment. Navigate to the "Fund Wallet" section on your dashboard for more details.',
                 'category' => 'Account',
                 'status' => 1,
                 'created_at' => now(),
@@ -40,16 +40,24 @@ class FaqSeeder extends Seeder
             ],
             [
                 'question' => 'How can I contact support?',
-                'answer' => 'You can reach us via our live chat ("Amtpay"), send an email to our support team, or contact us through WhatsApp. Our support channels are available 24/7.',
+                'answer' => 'You can reach us via our live chat, call our support line, or contact us through WhatsApp. Our support channels are available to assist you.',
                 'category' => 'Support',
                 'status' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'question' => 'What is the "Amtpay" AI Chat?',
-                'answer' => 'Amtpay is our smart AI support assistant designed to provide instant answers to your questions. For complex issues, Amtpay can also connect you to a human agent.',
-                'category' => 'Support',
+                'question' => 'What services can I pay for on OyitiPay?',
+                'answer' => 'You can buy airtime, data bundles, pay for cable TV subscriptions (DSTV, GOTV, Startimes), electricity bills, exam PINs (WAEC, NECO), and send bulk SMS.',
+                'category' => 'Services',
+                'status' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'question' => 'Are there any charges for deposits?',
+                'answer' => 'Deposit charges depend on your admin settings. When set to 0%, you enjoy FREE deposits with no fees deducted from your deposit amount.',
+                'category' => 'Fees',
                 'status' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),

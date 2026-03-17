@@ -1116,8 +1116,8 @@ class AppController extends Controller
                     'instagram' => $general->instagram,
 
                     // Support Identity
-                    'support_ai_name' => 'Amtpay',
-                    'support_call_name' => 'Amtpay',
+                    'support_ai_name' => 'OyitiPay',
+                    'support_call_name' => 'OyitiPay',
                     'support_phone' => $general->app_phone,
                     'support_whatsapp' => $general->app_whatsapp,
                 ],
