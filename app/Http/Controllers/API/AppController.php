@@ -23,8 +23,8 @@ class AppController extends Controller
                     'general' => $this->general(),
                     'bank' => DB::table('habukhan_key')->select('account_number', 'account_name', 'bank_name', 'min', 'max')->first(),
                     'support' => [
-                        'support_ai_name' => 'Amtpay',
-                        'support_call_name' => 'Aminiya',
+                        'support_ai_name' => 'OyitiPay',
+                        'support_call_name' => 'OyitiPay',
                         'support_phone' => optional($this->general())->app_phone ?? '+2349137570018',
                         'support_whatsapp' => '2349137570018'
                     ]

@@ -183,7 +183,7 @@ class SupportController extends Controller
         // 1. Greetings
         if (preg_match('/^(hi|hello|hey|greetings|good morning|good afternoon|good evening)/i', $message)) {
             return [
-                'message' => "Hi {$user->username} 👋 I'm Amtpay Assistant, your FAQ helper.\n\nI can help explain how things work, fees, and limits. For account-specific issues or missing funds, please tap 'Contact Support'.\n\nHow can I help you today?",
+                'message' => "Hi {$user->username} 👋 I'm OyitiPay Assistant, your FAQ helper.\n\nI can help explain how things work, fees, and limits. For account-specific issues or missing funds, please tap 'Contact Support'.\n\nHow can I help you today?",
                 'actions' => [
                     ['label' => 'How to Fund Wallet', 'action' => 'faq_funding'],
                     ['label' => 'Service Fees', 'action' => 'faq_fees'],
@@ -381,19 +381,41 @@ class SupportController extends Controller
         if (!$user)
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
 
+        // Validate request
+        $request->validate([
+            'message' => 'nullable|string|max:5000',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
+        ]);
+
+        // Ensure at least message or image is provided
+        if (empty($request->message) && !$request->hasFile('image')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Please provide a message or image'
+            ], 422);
+        }
+
         $attachmentUrl = null;
         $attachmentType = null;
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('support_uploads', 'public');
-            $attachmentUrl = asset('storage/' . $path);
-            $attachmentType = 'image';
+            try {
+                $path = $request->file('image')->store('support_uploads', 'public');
+                $attachmentUrl = asset('storage/' . $path);
+                $attachmentType = 'image';
+            } catch (\Exception $e) {
+                \Log::error('Support image upload failed: ' . $e->getMessage());
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to upload image. Please try again.'
+                ], 500);
+            }
         }
 
-        $this->saveMessage($ticketId, 'user', $user->id, $request->message, false, $attachmentUrl, $attachmentType);
+        $this->saveMessage($ticketId, 'user', $user->id, $request->message ?? '', false, $attachmentUrl, $attachmentType);
 
         // Update ticket last activity
         DB::table('support_tickets')->where('id', $ticketId)->update([
-            'last_message' => $request->message,
+            'last_message' => $request->message ?? '[Image]',
             'last_message_at' => now(),
             'status' => 'open' // Reopen if closed
         ]);
@@ -508,7 +530,7 @@ class SupportController extends Controller
                 ]);
 
                 // Log a system notification in the chat
-                $this->saveMessage($ticket->id, 'bot', null, "Agent was unavailable, so Amtpay AI has resumed to assist you! 👋", true);
+                $this->saveMessage($ticket->id, 'bot', null, "Agent was unavailable, so OyitiPay AI has resumed to assist you! 👋", true);
 
                 // Refresh ticket object
                 $ticket = DB::table('support_tickets')->where('id', $ticket->id)->first();
@@ -594,7 +616,7 @@ class SupportController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Ticket not found'], 404);
 
         // Notify User via System Message
-        $this->saveMessage($ticketId, 'agent', $user->id, "👋 Support session ended. Agent {$user->name} has closed this ticket. Amtpay AI is back to help you!", true);
+        $this->saveMessage($ticketId, 'agent', $user->id, "👋 Support session ended. Agent {$user->name} has closed this ticket. OyitiPay AI is back to help you!", true);
 
         DB::table('support_tickets')->where('id', $ticketId)->update([
             'status' => 'closed',
@@ -617,7 +639,7 @@ class SupportController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Ticket not found'], 404);
 
         // Notify User via System Message
-        $this->saveMessage($ticketId, 'agent', $user->id, "👋 Support session ended. Agent {$user->name} has closed this ticket. Amtpay AI is back to help you!", true);
+        $this->saveMessage($ticketId, 'agent', $user->id, "👋 Support session ended. Agent {$user->name} has closed this ticket. OyitiPay AI is back to help you!", true);
 
         DB::table('support_tickets')->where('id', $ticketId)->update([
             'status' => 'closed',
