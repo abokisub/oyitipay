@@ -27,18 +27,32 @@ if (empty($login['user']['apikey'])) {
 }
 
 $apikey = $login['user']['apikey'];
-echo "Logged in OK. Fetching cable plans...\n\n";
-
-// Step 2: Fetch cable plans
-$ch = curl_init($base . '/api/cable/cable-list');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
+$headers = [
     'Authorization: Token ' . $apikey,
     'Content-Type: application/json',
     'Origin: https://oyitipay.com'
-]);
-$res = curl_exec($ch);
-curl_close($ch);
+];
 
-$data = json_decode($res, true);
-print_r($data);
+echo "Logged in OK. Trying multiple endpoints...\n\n";
+
+// Try multiple possible endpoints
+$endpoints = [
+    '/api/cable/cable-list',
+    '/api/cable/plans',
+    '/api/cable-plan',
+    '/api/cable/cable-plan',
+    '/website/app/cable',
+    '/api/cable/',
+];
+
+foreach ($endpoints as $ep) {
+    echo "--- Trying: $base$ep ---\n";
+    $ch = curl_init($base . $ep);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $res = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    echo "HTTP $code: " . substr($res, 0, 500) . "\n\n";
+}
