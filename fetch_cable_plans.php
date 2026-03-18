@@ -5,54 +5,29 @@ $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
 use Illuminate\Support\Facades\DB;
 
-$api = DB::table('web_api')->first();
-$hab = DB::table('habukhan_api')->first();
-$base = $api->habukhan_website1;
-$username = $hab->habukhan1_username;
-$password = $hab->habukhan1_password;
-
-// Step 1: Login
-$ch = curl_init($base . '/api/login/verify/user');
-curl_setopt($ch, CURLOPT_POST, 1);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['username' => $username, 'password' => $password]));
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-$login = json_decode(curl_exec($ch), true);
-curl_close($ch);
-
-if (empty($login['user']['apikey'])) {
-    echo "Login failed\n";
-    print_r($login);
-    exit;
+// Show current state
+echo "=== BEFORE UPDATE ===\n";
+$plans = DB::table('cable_plan')->select('plan_id', 'plan_name', 'cable_name', 'habukhan1')->orderBy('plan_id')->get();
+foreach ($plans as $p) {
+    $status = empty($p->habukhan1) ? '❌ EMPTY' : '✅ ' . $p->habukhan1;
+    echo "plan_id=$p->plan_id | $p->cable_name | $p->plan_name | habukhan1=$status\n";
 }
 
-$apikey = $login['user']['apikey'];
-$headers = [
-    'Authorization: Token ' . $apikey,
-    'Content-Type: application/json',
-    'Origin: https://oyitipay.com'
-];
+echo "\n=== UPDATING: Setting habukhan1 = plan_id for all empty plans ===\n";
 
-echo "Logged in OK. Trying multiple endpoints...\n\n";
+$updated = DB::table('cable_plan')
+    ->where(function($q) {
+        $q->whereNull('habukhan1')->orWhere('habukhan1', '');
+    })
+    ->update(['habukhan1' => DB::raw('plan_id')]);
 
-// Try multiple possible endpoints
-$endpoints = [
-    '/api/cable/cable-list',
-    '/api/cable/plans',
-    '/api/cable-plan',
-    '/api/cable/cable-plan',
-    '/website/app/cable',
-    '/api/cable/',
-];
+echo "Updated $updated plans\n\n";
 
-foreach ($endpoints as $ep) {
-    echo "--- Trying: $base$ep ---\n";
-    $ch = curl_init($base . $ep);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    $res = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    echo "HTTP $code: " . substr($res, 0, 500) . "\n\n";
+// Show after state
+echo "=== AFTER UPDATE ===\n";
+$plans = DB::table('cable_plan')->select('plan_id', 'plan_name', 'cable_name', 'habukhan1')->orderBy('plan_id')->get();
+foreach ($plans as $p) {
+    echo "plan_id=$p->plan_id | $p->cable_name | $p->plan_name | habukhan1=$p->habukhan1\n";
 }
+
+echo "\nDone! Cable purchases via Habukhan should now work.\n";
