@@ -17,7 +17,10 @@ class ApiSending extends Controller
             'sending_data' => $sending_data
         ]);
         
-        // Step 1: Login to get access token using KoboPoint API
+        // Detect if this is an electricity/bill call (endpoint contains /api/bill)
+        $is_bill = (strpos($data['endpoint'], '/api/bill') !== false);
+        
+        // Step 1: Login to get access token
         $login_url = $data['website_url'] . "/api/login/verify/user";
         \Log::info('HabukhanApi Debug - Login URL:', ['url' => $login_url]);
         
@@ -35,11 +38,6 @@ class ApiSending extends Controller
             'password' => $password
         ]);
         
-        \Log::info('HabukhanApi Debug - Login Payload:', [
-            'username' => $username,
-            'payload' => $login_payload
-        ]);
-        
         curl_setopt($ch, CURLOPT_POSTFIELDS, $login_payload);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json'
@@ -52,7 +50,6 @@ class ApiSending extends Controller
         
         \Log::info('HabukhanApi Debug - Login Response:', [
             'http_code' => $http_code,
-            'response' => $json,
             'curl_error' => $curl_error
         ]);
         
@@ -61,58 +58,79 @@ class ApiSending extends Controller
         if (!empty($decode_habukhan)) {
             if (isset($decode_habukhan['token']) && $decode_habukhan['status'] == 'success') {
                 $access_token = $decode_habukhan['token'];
-                
-                \Log::info('HabukhanApi Debug - Got Token and API Key:', [
-                    'token' => substr($access_token, 0, 10) . '...',
-                    'apikey' => isset($decode_habukhan['user']['apikey']) ? substr($decode_habukhan['user']['apikey'], 0, 10) . '...' : 'NOT_FOUND',
-                    'pin_available' => isset($decode_habukhan['user']['pin']) ? 'YES' : 'NO',
-                    'user_balance' => $decode_habukhan['user']['bal'] ?? 'N/A'
-                ]);
-                
-                // CRITICAL: Use API Key for transactions, NOT login token
                 $api_key = $decode_habukhan['user']['apikey'] ?? null;
                 $user_pin = $decode_habukhan['user']['pin'] ?? null;
                 
-                if (!$api_key) {
-                    \Log::error('HabukhanApi Debug - API Key not found in login response');
-                    return ['status' => 'fail', 'message' => 'API Key not found'];
-                }
+                \Log::info('HabukhanApi Debug - Login Success:', [
+                    'is_bill' => $is_bill,
+                    'has_apikey' => !empty($api_key),
+                    'has_pin' => !empty($user_pin),
+                    'user_balance' => $decode_habukhan['user']['bal'] ?? 'N/A'
+                ]);
                 
-                if (!$user_pin) {
-                    \Log::error('HabukhanApi Debug - PIN not found in login response');
-                    return ['status' => 'fail', 'message' => 'Transaction PIN not found'];
+                // Step 2: Build payload based on service type
+                if ($is_bill) {
+                    // ELECTRICITY: Use pin + user_id as per Habukhan electricity docs
+                    // POST /api/bill requires: disco, meter_number, amount, pin, user_id
+                    if (!$user_pin) {
+                        \Log::error('HabukhanApi - PIN not found for bill transaction');
+                        return ['status' => 'fail', 'message' => 'Transaction PIN not found'];
+                    }
+                    
+                    $final_payload = [
+                        'disco' => $sending_data['disco'],
+                        'meter_number' => $sending_data['meter_number'],
+                        'amount' => (string) $sending_data['amount'],
+                        'pin' => $user_pin,
+                        'user_id' => $access_token
+                    ];
+                    
+                    $headers = [
+                        'Content-Type: application/json'
+                    ];
+                    
+                    \Log::info('HabukhanApi - Bill Payload (Habukhan format):', [
+                        'payload_keys' => array_keys($final_payload),
+                        'disco' => $final_payload['disco'],
+                        'meter_number' => $final_payload['meter_number'],
+                        'amount' => $final_payload['amount']
+                    ]);
+                } else {
+                    // OTHER SERVICES (data, airtime, cable, etc): Use API key + Origin header
+                    if (!$api_key) {
+                        \Log::error('HabukhanApi - API Key not found for non-bill transaction');
+                        return ['status' => 'fail', 'message' => 'API Key not found'];
+                    }
+                    
+                    // Remove PIN if present, add unique request-id
+                    if (isset($sending_data['pin'])) {
+                        unset($sending_data['pin']);
+                    }
+                    $unique_request_id = ($sending_data['request-id'] ?? 'TXN') . '_' . time() . '_' . uniqid();
+                    $sending_data['request-id'] = $unique_request_id;
+                    
+                    $final_payload = $sending_data;
+                    
+                    $headers = [
+                        "Authorization: Token $api_key",
+                        'Content-Type: application/json',
+                        'Origin: https://oyitipay.com'
+                    ];
                 }
-                
-                // Step 2: Add PIN to transaction data and generate unique request-id
-                // Actually, remove PIN - pure API flow doesn't need it when Origin header is not sent
-                if (isset($sending_data['pin'])) {
-                    unset($sending_data['pin']);
-                }
-                
-                // Ensure request-id is unique by adding timestamp and random component
-                $unique_request_id = ($sending_data['request-id'] ?? 'TXN') . '_' . time() . '_' . uniqid();
-                $sending_data['request-id'] = $unique_request_id;
                 
                 // Step 3: Make the actual transaction call
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $data['endpoint']);
                 curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($sending_data));
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($final_payload));
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-                
-                // CRITICAL: Add Origin header to trigger External API flow (no PIN required)
-                $headers = [
-                    "Authorization: Token $api_key", // Use API Key
-                    'Content-Type: application/json',
-                    'Origin: https://oyitipay.com' // CRITICAL: Triggers external integration flow
-                ];
+                curl_setopt($ch, CURLOPT_TIMEOUT, $is_bill ? 60 : 30);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
                 
                 \Log::info('HabukhanApi Debug - Transaction Request:', [
                     'url' => $data['endpoint'],
-                    'payload' => $sending_data,
-                    'headers' => ['Authorization: Token ' . substr($api_key, 0, 10) . '...', 'Content-Type: application/json', 'Origin: https://oyitipay.com']
+                    'is_bill' => $is_bill,
+                    'payload_keys' => array_keys($final_payload)
                 ]);
                 
                 $dataapi = curl_exec($ch);
@@ -126,7 +144,14 @@ class ApiSending extends Controller
                     'curl_error' => $curl_error
                 ]);
                 
-                return json_decode($dataapi, true);
+                $response = json_decode($dataapi, true);
+                
+                // Extract token from Habukhan bill response data if present
+                if ($is_bill && !empty($response) && isset($response['status']) && $response['status'] == 'success' && isset($response['data']['token'])) {
+                    $response['token'] = $response['data']['token'];
+                }
+                
+                return $response;
 
             } else {
                 \Log::error('HabukhanApi Debug - Login Failed:', [
