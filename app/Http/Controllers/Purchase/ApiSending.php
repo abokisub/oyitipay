@@ -70,30 +70,35 @@ class ApiSending extends Controller
                 
                 // Step 2: Build payload based on service type
                 if ($is_bill) {
-                    // ELECTRICITY: Use pin + user_id as per Habukhan electricity docs
-                    // POST /api/bill requires: disco, meter_number, amount, pin, user_id
-                    if (!$user_pin) {
-                        \Log::error('HabukhanApi - PIN not found for bill transaction');
-                        return ['status' => 'fail', 'message' => 'Transaction PIN not found'];
+                    // ELECTRICITY: Use same API key + Origin approach as other services
+                    // The Habukhan docs show pin+user_id for USER flow, but for 
+                    // external API integration we use Token auth + Origin header
+                    // (same as airtime/data/cable which work correctly)
+                    if (!$api_key) {
+                        \Log::error('HabukhanApi - API Key not found for bill transaction');
+                        return ['status' => 'fail', 'message' => 'API Key not found'];
                     }
                     
-                    $final_payload = [
-                        'disco' => $sending_data['disco'],
-                        'meter_number' => $sending_data['meter_number'],
-                        'amount' => (string) $sending_data['amount'],
-                        'pin' => $user_pin,
-                        'user_id' => $access_token
-                    ];
+                    // Remove PIN if present, add unique request-id
+                    if (isset($sending_data['pin'])) {
+                        unset($sending_data['pin']);
+                    }
+                    $unique_request_id = ($sending_data['request-id'] ?? 'TXN') . '_' . time() . '_' . uniqid();
+                    $sending_data['request-id'] = $unique_request_id;
+                    
+                    $final_payload = $sending_data;
                     
                     $headers = [
-                        'Content-Type: application/json'
+                        "Authorization: Token $api_key",
+                        'Content-Type: application/json',
+                        'Origin: https://oyitipay.com'
                     ];
                     
-                    \Log::info('HabukhanApi - Bill Payload (Habukhan format):', [
+                    \Log::info('HabukhanApi - Bill Payload (API key + Origin):', [
                         'payload_keys' => array_keys($final_payload),
-                        'disco' => $final_payload['disco'],
-                        'meter_number' => $final_payload['meter_number'],
-                        'amount' => $final_payload['amount']
+                        'disco' => $final_payload['disco'] ?? 'N/A',
+                        'meter_number' => $final_payload['meter_number'] ?? 'N/A',
+                        'amount' => $final_payload['amount'] ?? 'N/A'
                     ]);
                 } else {
                     // OTHER SERVICES (data, airtime, cable, etc): Use API key + Origin header
