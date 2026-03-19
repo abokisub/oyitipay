@@ -16,6 +16,14 @@ class BillPurchase extends Controller
 {
     public function Buy(Request $request)
     {
+        \Log::info('BillPurchase::Buy HIT', [
+            'all_input' => $request->all(),
+            'auth_header' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : 'NONE',
+            'origin' => $request->headers->get('origin'),
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+        ]);
+
         $explode_url = explode(',', config('app.habukhan_app_key'));
         if (config('app.habukhan_device_key') == $request->header('Authorization')) {
             $validator = Validator::make($request->all(), [
