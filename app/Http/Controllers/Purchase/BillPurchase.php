@@ -228,7 +228,17 @@ class BillPurchase extends Controller
                                                                                 'plan_id' => $request->disco,
                                                                                 'transid' => $transid
                                                                             ];
+                                                                            \Log::info('BillPurchase: Calling BillSend method', [
+                                                                                'method' => $check_now,
+                                                                                'bill_data' => $bill_data,
+                                                                                'bill_plan_habukhan1' => $bill_plan->habukhan1 ?? 'NULL',
+                                                                                'disco_name' => $bill_plan->disco_name,
+                                                                            ]);
                                                                             $response = $billvend->$check_now($bill_data);
+                                                                            \Log::info('BillPurchase: BillSend response', [
+                                                                                'method' => $check_now,
+                                                                                'response' => $response,
+                                                                            ]);
                                                                             if (!empty($response)) {
                                                                                 if ($response == 'success') {
                                                                                     // --- SMART BENEFICIARY SAVE ---
