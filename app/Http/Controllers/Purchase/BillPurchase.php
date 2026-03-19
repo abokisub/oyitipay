@@ -16,6 +16,7 @@ class BillPurchase extends Controller
 {
     public function Buy(Request $request)
     {
+        try {
         \Log::info('BillPurchase::Buy HIT', [
             'all_input' => $request->all(),
             'auth_header' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : 'NONE',
@@ -183,6 +184,11 @@ class BillPurchase extends Controller
                                                                     \Log::error("BillPurchase Error: Method {$check_now} does not exist in MeterSend.");
                                                                     $customer_name = null;
                                                                 }
+                                                                \Log::info('BillPurchase: After meter verify', [
+                                                                    'method' => $check_now,
+                                                                    'customer_name' => $customer_name,
+                                                                    'bypass' => $request->bypass,
+                                                                ]);
                                                                 if ((empty($customer_name)) && ($request->bypass == false || $request->bypass == 'false')) {
                                                                     return response()->json([
                                                                         'status' => 'fail',
@@ -494,6 +500,18 @@ class BillPurchase extends Controller
                 'status' => 'fail',
                 'message' => 'Authorization Header Token Required'
             ])->setStatusCode(403);
+        }
+        } catch (\Exception $e) {
+            \Log::error('BillPurchase::Buy EXCEPTION', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => substr($e->getTraceAsString(), 0, 1000),
+            ]);
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Server error: ' . $e->getMessage()
+            ])->setStatusCode(500);
         }
     }
 }
