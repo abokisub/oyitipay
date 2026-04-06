@@ -9,7 +9,7 @@ if (!$secret) {
 }
 
 // Use a real user email from your DB
-$email = 'adexplug@gmail.com'; // <-- change to a real user email
+$email = 'abokisub@gmail.com'; // real user from DB
 
 $payload = json_encode([
     'notification_status' => 'payment_successful',
