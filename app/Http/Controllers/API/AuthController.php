@@ -626,7 +626,6 @@ class AuthController extends Controller
         if (!$origin || in_array($origin, $explode_url)) {
             try {
                 //our login function over here
-                \Log::info('API Login Hit: ' . json_encode($request->except('password')));
                 $validator = Validator::make($request->all(), [
                     'username' => 'required|string',
                     'password' => 'required'

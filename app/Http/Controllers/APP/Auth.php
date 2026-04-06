@@ -149,9 +149,6 @@ class Auth extends Controller
 
                     // Optimized: Replaced XOR chain with simple OR. Uses cached values.
                     if ($is_bcrypt_match || $is_plain_match || $is_legacy_hash_match || $is_md5_match) {
-                        // APP Login Debug
-                        \Log::info('AppLogin Debug: User=' . $user->username . ', Type="' . $user->type . '", Status=' . $user->status);
-
                         if ($user->status == 1 || trim(strtoupper($user->type)) == 'ADMIN' || strcasecmp($user->username, 'Habukhan') == 0) {
                             if (isset($request->app_token)) {
                                 DB::table('user')->where(['id' => $user->id])->update(['app_token' => $request->app_token]);
