@@ -155,27 +155,32 @@ class BankingService
      */
     public function getSupportedBanks()
     {
-        $provider = $this->getActiveProvider();
-        $providerSlug = $provider->getProviderSlug();
-        
-        // For PointWave, use the 'code' column (primary bank code)
-        // For other providers, use their specific code columns
-        if ($providerSlug === 'pointwave') {
+        try {
+            $provider = $this->getActiveProvider();
+            $providerSlug = $provider->getProviderSlug();
+            
+            // For PointWave, use the 'code' column (primary bank code)
+            // For other providers, use their specific code columns
+            if ($providerSlug === 'pointwave') {
+                return DB::table('unified_banks')
+                    ->where('active', true)
+                    ->whereNotNull('code')
+                    ->where('code', '!=', '')
+                    ->orderBy('name')
+                    ->get();
+            }
+            
+            // For other providers (paystack, xixapay, monnify)
             return DB::table('unified_banks')
                 ->where('active', true)
-                ->whereNotNull('code')
-                ->where('code', '!=', '')
+                ->whereNotNull("{$providerSlug}_code")
+                ->where("{$providerSlug}_code", '!=', '')
                 ->orderBy('name')
                 ->get();
+        } catch (\Exception $e) {
+            Log::error('getSupportedBanks Error: ' . $e->getMessage());
+            return collect([]); // Return empty collection so fallback kicks in
         }
-        
-        // For other providers (paystack, xixapay, monnify)
-        return DB::table('unified_banks')
-            ->where('active', true)
-            ->whereNotNull("{$providerSlug}_code")
-            ->where("{$providerSlug}_code", '!=', '')
-            ->orderBy('name')
-            ->get();
     }
 
     /**

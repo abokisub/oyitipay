@@ -42,11 +42,7 @@ class DataSend extends Controller
             // Store reference immediately
             DB::table('data')->where('transid', $data['transid'])->update(['api_reference' => $reference]);
 
-            \Log::info('Autopilot Data REQUEST:', ['payload' => $payload, 'transid' => $data['transid']]);
-
             $response = (new Controller)->autopilot_request('/v1/data', $payload);
-
-            \Log::info('Autopilot Data RESPONSE:', ['response' => $response, 'transid' => $data['transid']]);
 
             if (!empty($response)) {
                 // Autopilot uses both 'status' and 'code' fields
@@ -56,13 +52,10 @@ class DataSend extends Controller
                 $code = $response['code'] ?? 0;
 
                 if ($status == true && $code == 200) {
-                    \Log::info('Autopilot Data: Returning SUCCESS', ['transid' => $data['transid']]);
                     return 'success';
                 } else if ($status == false || $code == 424) {
-                    \Log::info('Autopilot Data: Returning FAIL', ['transid' => $data['transid'], 'code' => $code, 'message' => $response['data']['message'] ?? 'No message']);
                     return 'fail';
                 } else {
-                    \Log::info('Autopilot Data: Returning PROCESS (code=' . $code . ')', ['transid' => $data['transid'], 'response' => $response]);
                     return 'process';
                 }
             }
@@ -315,18 +308,14 @@ class DataSend extends Controller
             
             // Format phone number for Adex API (they expect 11 digits Nigerian format)
             $phone = $sendRequest->plan_phone;
-            \Log::info('Adex1 Data Phone Before Format:', ['original_phone' => $phone]);
             
             // Ensure it's 11 digits starting with 0
             if (substr($phone, 0, 3) == '234') {
-                $phone = '0' . substr($phone, 3); // Convert 2347040540018 to 07040540018
+                $phone = '0' . substr($phone, 3);
             }
-            // If it doesn't start with 0, add it
             if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
-                $phone = '0' . $phone; // Convert 7040540018 to 07040540018
+                $phone = '0' . $phone;
             }
-            
-            \Log::info('Adex1 Data Phone After Format:', ['formatted_phone' => $phone]);
             
             // Use proper Adex network ID (1 for MTN according to Adex docs)
             $adex_network_id = 1; // Default to MTN
