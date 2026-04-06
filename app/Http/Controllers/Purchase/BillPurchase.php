@@ -16,7 +16,6 @@ class BillPurchase extends Controller
 {
     public function Buy(Request $request)
     {
-        try {\n
         $explode_url = explode(',', config('app.habukhan_app_key'));
         if (config('app.habukhan_device_key') == $request->header('Authorization')) {
             $validator = Validator::make($request->all(), [
@@ -175,7 +174,8 @@ class BillPurchase extends Controller
                                                                 else {
                                                                     \Log::error("BillPurchase Error: Method {$check_now} does not exist in MeterSend.");
                                                                     $customer_name = null;
-                                                                }\n                                                                if ((empty($customer_name)) && ($request->bypass == false || $request->bypass == 'false')) {
+                                                                }
+                                                                if ((empty($customer_name)) && ($request->bypass == false || $request->bypass == 'false')) {
                                                                     return response()->json([
                                                                         'status' => 'fail',
                                                                         'message' => 'Invalid Meter Number'
@@ -219,7 +219,9 @@ class BillPurchase extends Controller
                                                                                 'username' => $user->username,
                                                                                 'plan_id' => $request->disco,
                                                                                 'transid' => $transid
-                                                                            ];\n                                                                            $response = $billvend->$check_now($bill_data);\n                                                                            if (!empty($response)) {
+                                                                            ];
+                                                                            $response = $billvend->$check_now($bill_data);
+                                                                            if (!empty($response)) {
                                                                                 if ($response == 'success') {
                                                                                     // --- SMART BENEFICIARY SAVE ---
                                                                                     try {
@@ -474,18 +476,6 @@ class BillPurchase extends Controller
                 'status' => 'fail',
                 'message' => 'Authorization Header Token Required'
             ])->setStatusCode(403);
-        }
-        } catch (\Exception $e) {
-            \Log::error('BillPurchase::Buy EXCEPTION', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => substr($e->getTraceAsString(), 0, 1000),
-            ]);
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Server error: ' . $e->getMessage()
-            ])->setStatusCode(500);
         }
     }
 }

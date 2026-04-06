@@ -462,8 +462,12 @@ class CableSend extends Controller
                 'website_url' => $api_website->adex_website1,
                 'endpoint' => $api_website->adex_website1 . "/api/cable",
                 'accessToken' => $accessToken
-            ];\n            
-            $response = ApiSending::AdexApi($admin_details, $paypload);\n            
+            ];
+            
+            
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            
+            
             if (!empty($response)) {
                 if ($response['status'] == 'success') {
                     if (isset($response['response'])) {

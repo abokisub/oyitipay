@@ -424,8 +424,12 @@ class BillSend extends Controller
                 'website_url' => $api_website->adex_website1,
                 'endpoint' => $api_website->adex_website1 . "/api/bill",
                 'accessToken' => $accessToken
-            ];\n            
-            $response = ApiSending::AdexApi($admin_details, $paypload);\n            
+            ];
+            
+            
+            $response = ApiSending::AdexApi($admin_details, $paypload);
+            
+            
             if (!empty($response)) {
                 if ($response['status'] == 'success') {
                     // Extract and save token from response

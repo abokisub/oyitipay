@@ -240,7 +240,8 @@ class ExamSend extends Controller
             curl_close($curl);
 
             // Log response for debugging
-            $masked_token = substr($habukhan_api->easy_access, 0, 5) . "..." . substr($habukhan_api->easy_access, -5);\n
+            $masked_token = substr($habukhan_api->easy_access, 0, 5) . "..." . substr($habukhan_api->easy_access, -5);
+
             if ($response) {
                 $res = $response['res'] ?? $response;
                 $status = strtolower($res['status'] ?? '');

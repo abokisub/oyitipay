@@ -178,7 +178,8 @@ class CablePurchase extends Controller
                                                             else {
                                                                 \Log::error("CablePurchase IUC Error: Method {$check_now} does not exist in IUCsend.");
                                                                 $customer_name = null;
-                                                            }\n                                                            if ((empty($customer_name)) && ($request->bypass == false || $request->bypass == 'false')) {
+                                                            }
+                                                            if ((empty($customer_name)) && ($request->bypass == false || $request->bypass == 'false')) {
                                                                 $errorMessage = (strpos($cable_name, 'showmax') !== false)
                                                                     ? 'Invalid Phone Number or Service Unavailable'
                                                                     : 'Invalid IUC Number or Service Unavailable';
