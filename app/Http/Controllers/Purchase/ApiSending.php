@@ -3,119 +3,133 @@ namespace App\Http\Controllers\Purchase;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\MailController;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ApiSending extends Controller
 {
+
+    /**
+     * Perform Habukhan login and return ['api_key' => ..., 'access_token' => ...].
+     * Result is cached per username for 25 minutes to avoid a login round-trip on every purchase.
+     */
+    private static function habukhanLogin(string $loginUrl, string $username, string $password): ?array
+    {
+        $cacheKey = 'habukhan_token_' . md5($loginUrl . $username);
+
+        // Return cached credentials if still valid
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $loginUrl);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['username' => $username, 'password' => $password]));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+        $json      = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $decoded = json_decode($json, true);
+
+        if (
+            !empty($decoded) &&
+            isset($decoded['token']) &&
+            $decoded['status'] === 'success' &&
+            !empty($decoded['user']['apikey'])
+        ) {
+            $credentials = [
+                'access_token' => $decoded['token'],
+                'api_key'      => $decoded['user']['apikey'],
+            ];
+            // Cache for 25 minutes (tokens typically last 30–60 min)
+            Cache::put($cacheKey, $credentials, now()->addMinutes(25));
+            return $credentials;
+        }
+
+        \Log::error('HabukhanApi - Login Failed:', ['http_code' => $http_code, 'response' => $decoded]);
+        return null;
+    }
 
     public static function HabukhanApi($data, $sending_data)
     {
         // Detect if this is an electricity/bill call (endpoint contains /api/bill)
         $is_bill = (strpos($data['endpoint'], '/api/bill') !== false);
 
-        // Step 1: Login to get access token
-        $login_url = $data['website_url'] . "/api/login/verify/user";
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $login_url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-
         $decoded_auth = base64_decode($data['accessToken']);
         list($username, $password) = explode(':', $decoded_auth);
+        $login_url = $data['website_url'] . "/api/login/verify/user";
 
-        $login_payload = json_encode([
-            'username' => $username,
-            'password' => $password
-        ]);
+        // Attempt with cached credentials first; retry once with fresh login on failure
+        $credentials = self::habukhanLogin($login_url, $username, $password);
 
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $login_payload);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json'
-        ]);
+        if (!$credentials) {
+            return ['status' => 'fail', 'message' => 'Login failed'];
+        }
 
-        $json = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curl_error = curl_error($ch);
+        $api_key = $credentials['api_key'];
+
+        if (isset($sending_data['pin'])) {
+            unset($sending_data['pin']);
+        }
+        $unique_request_id = ($sending_data['request-id'] ?? 'TXN') . '_' . time() . '_' . uniqid();
+        $sending_data['request-id'] = $unique_request_id;
+
+        $headers = [
+            "Authorization: Token $api_key",
+            'Content-Type: application/json',
+            'Origin: https://oyitipay.com'
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $data['endpoint']);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($sending_data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $is_bill ? 60 : 30);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        $dataapi  = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        $decode_habukhan = json_decode($json, true);
+        $response = json_decode($dataapi, true);
 
-        if (!empty($decode_habukhan)) {
-            if (isset($decode_habukhan['token']) && $decode_habukhan['status'] == 'success') {
-                $access_token = $decode_habukhan['token'];
-                $api_key = $decode_habukhan['user']['apikey'] ?? null;
+        // If the API returns 401/403, the cached token may have expired — clear it and retry once
+        if (in_array($httpcode, [401, 403])) {
+            $cacheKey = 'habukhan_token_' . md5($login_url . $username);
+            Cache::forget($cacheKey);
 
-                // Step 2: Build payload based on service type
-                if ($is_bill) {
-                    if (!$api_key) {
-                        \Log::error('HabukhanApi - API Key not found for bill transaction');
-                        return ['status' => 'fail', 'message' => 'API Key not found'];
-                    }
-
-                    if (isset($sending_data['pin'])) {
-                        unset($sending_data['pin']);
-                    }
-                    $unique_request_id = ($sending_data['request-id'] ?? 'TXN') . '_' . time() . '_' . uniqid();
-                    $sending_data['request-id'] = $unique_request_id;
-
-                    $final_payload = $sending_data;
-
-                    $headers = [
-                        "Authorization: Token $api_key",
-                        'Content-Type: application/json',
-                        'Origin: https://oyitipay.com'
-                    ];
-                } else {
-                    if (!$api_key) {
-                        \Log::error('HabukhanApi - API Key not found for non-bill transaction');
-                        return ['status' => 'fail', 'message' => 'API Key not found'];
-                    }
-
-                    if (isset($sending_data['pin'])) {
-                        unset($sending_data['pin']);
-                    }
-                    $unique_request_id = ($sending_data['request-id'] ?? 'TXN') . '_' . time() . '_' . uniqid();
-                    $sending_data['request-id'] = $unique_request_id;
-
-                    $final_payload = $sending_data;
-
-                    $headers = [
-                        "Authorization: Token $api_key",
-                        'Content-Type: application/json',
-                        'Origin: https://oyitipay.com'
-                    ];
-                }
-
-                // Step 3: Make the actual transaction call
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $data['endpoint']);
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($final_payload));
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, $is_bill ? 60 : 30);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-                $dataapi = curl_exec($ch);
-                $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                curl_close($ch);
-
-                $response = json_decode($dataapi, true);
-
-                if ($is_bill && !empty($response) && isset($response['status']) && $response['status'] == 'success' && isset($response['data']['token'])) {
-                    $response['token'] = $response['data']['token'];
-                }
-
-                return $response;
-
-            } else {
-                \Log::error('HabukhanApi - Login Failed:', ['response' => $decode_habukhan]);
-                return ['status' => 'fail', 'message' => 'Login failed: ' . ($decode_habukhan['message'] ?? 'Unknown error')];
+            $credentials = self::habukhanLogin($login_url, $username, $password);
+            if (!$credentials) {
+                return ['status' => 'fail', 'message' => 'Re-authentication failed'];
             }
-        } else {
-            \Log::error('HabukhanApi - Empty Login Response:', ['http_code' => $http_code]);
-            return ['status' => 'fail', 'message' => 'No response from login endpoint'];
+
+            $api_key = $credentials['api_key'];
+            $headers[0] = "Authorization: Token $api_key";
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $data['endpoint']);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($sending_data));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, $is_bill ? 60 : 30);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+            $dataapi  = curl_exec($ch);
+            curl_close($ch);
+            $response = json_decode($dataapi, true);
         }
+
+        if ($is_bill && !empty($response) && isset($response['status']) && $response['status'] == 'success' && isset($response['data']['token'])) {
+            $response['token'] = $response['data']['token'];
+        }
+
+        return $response;
     }
 
     public static function AdexApi($data, $sending_data)
