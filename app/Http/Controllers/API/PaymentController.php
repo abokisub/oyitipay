@@ -23,7 +23,7 @@ class PaymentController extends Controller
         $payload = $request->getContent();
 
         // Define the secret key from environment
-        $secret = env('XIXAPAY_SECRET_KEY');
+        $secret = trim(env('XIXAPAY_SECRET_KEY'));
 
         // Retrieve the XixaPay signature from the request headers
         $xixapay_signature = $request->header('xixapay');
@@ -34,9 +34,11 @@ class PaymentController extends Controller
         // Compare the computed hash key with the received signature
         if ($xixapay_signature !== $hashkey) {
             \Log::error('Xixapay Webhook: Signature mismatch', [
-                'received_header' => $xixapay_signature,
-                'all_headers' => $request->headers->all(),
-                'expected_hash_prefix' => substr($hashkey, 0, 10),
+                'received' => $xixapay_signature,
+                'expected' => $hashkey,
+                'secret_length' => strlen($secret),
+                'secret_prefix' => substr($secret, 0, 10),
+                'payload_length' => strlen($payload),
             ]);
             return response()->json('Unknown source', 403);
         }
