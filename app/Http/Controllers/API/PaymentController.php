@@ -27,13 +27,17 @@ class PaymentController extends Controller
 
         // Retrieve the XixaPay signature from the request headers
         $xixapay_signature = $request->header('xixapay');
-        // Log the incoming payload for debugging
 
         // Compute the hash key using the payload and secret key
         $hashkey = hash_hmac('sha256', $payload, $secret);
 
         // Compare the computed hash key with the received signature
         if ($xixapay_signature !== $hashkey) {
+            \Log::error('Xixapay Webhook: Signature mismatch', [
+                'received_header' => $xixapay_signature,
+                'all_headers' => $request->headers->all(),
+                'expected_hash_prefix' => substr($hashkey, 0, 10),
+            ]);
             return response()->json('Unknown source', 403);
         }
 
@@ -56,51 +60,60 @@ class PaymentController extends Controller
             return response()->json('Unable to find user', 403);
         }
 
-        // Fetch user details
+        // Fetch user details with lock to prevent race conditions
         $user = DB::table('user')->where(['email' => $customer_email, 'status' => 1])->first();
 
         // Compute charges and credit amount from dynamic settings
         $charges = $this->core()->xixapay_charge ?? 60;
-
         $credit = $amount_paid - $charges;
 
         // Generate a unique transaction ID
         $transid = $this->purchase_ref('AUTOMATED_');
 
-        // Insert deposit record
-        DB::table('deposit')->insert([
-            'username' => $user->username,
-            'amount' => $amount_paid,
-            'oldbal' => $user->bal,
-            'newbal' => $user->bal + $credit,
-            'wallet_type' => 'User Wallet',
-            'type' => 'Automated Bank Transfer',
-            'credit_by' => 'Palmpay Automated Bank Transfer',
-            'date' => $this->system_date(),
-            'status' => 1,
-            'transid' => $transid,
-            'charges' => $charges,
-            'monify_ref' => $reference
-        ]);
+        // Atomic balance update with lock
+        DB::transaction(function () use ($user, $amount_paid, $credit, $charges, $transid, $reference) {
+            $locked_user = DB::table('user')->where('id', $user->id)->lockForUpdate()->first();
+            $new_bal = $locked_user->bal + $credit;
 
-        // Update user balance
-        DB::table('user')->where(['id' => $user->id])->update(['bal' => $user->bal + $credit]);
+            // Insert deposit record
+            DB::table('deposit')->insert([
+                'username' => $locked_user->username,
+                'amount' => $amount_paid,
+                'oldbal' => $locked_user->bal,
+                'newbal' => $new_bal,
+                'wallet_type' => 'User Wallet',
+                'type' => 'Automated Bank Transfer',
+                'credit_by' => 'Palmpay Automated Bank Transfer',
+                'date' => $this->system_date(),
+                'status' => 1,
+                'transid' => $transid,
+                'charges' => $charges,
+                'monify_ref' => $reference
+            ]);
 
-        // Insert notifications and messages
+            // Update user balance
+            DB::table('user')->where('id', $locked_user->id)->update(['bal' => $new_bal]);
+
+            // Insert message history
+            DB::table('message')->insert([
+                'username' => $locked_user->username,
+                'amount' => $credit,
+                'message' => 'Account Credited By Automated Bank Transfer ₦' . number_format($credit, 2),
+                'oldbal' => $locked_user->bal,
+                'newbal' => $new_bal,
+                'habukhan_date' => $this->system_date(),
+                'plan_status' => 1,
+                'transid' => $transid,
+                'phone_account' => 'Automated Funding',
+                'role' => 'credit'
+            ]);
+        });
+
+        // Refresh user after transaction
+        $user = DB::table('user')->where('id', $user->id)->first();
+
+        // Send notification
         (new \App\Services\NotificationService())->sendExternalCreditNotification($user, $credit, $transid);
-
-        DB::table('message')->insert([
-            'username' => $user->username,
-            'amount' => $credit,
-            'message' => 'Account Credited By Automated Bank Transfer ₦' . number_format($credit, 2),
-            'oldbal' => $user->bal,
-            'newbal' => $user->bal + $credit,
-            'habukhan_date' => $this->system_date(),
-            'plan_status' => 1,
-            'transid' => $transid,
-            'phone_account' => 'Automated Funding',
-            'role' => 'credit'
-        ]);
 
         // Send Email Receipt
         $email_data = [
@@ -109,7 +122,7 @@ class PaymentController extends Controller
             'title' => 'Wallet Funding Success',
             'amount' => $amount_paid,
             'charges' => $charges,
-            'newbal' => $user->bal + $credit,
+            'newbal' => $user->bal,
             'transid' => $transid,
             'date' => $this->system_date(),
             'mes' => "Your wallet has been credited with ₦" . number_format($credit, 2) . " via PalmPay/Kolomoni (Xixapay)."
