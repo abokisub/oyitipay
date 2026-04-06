@@ -16,15 +16,7 @@ class BillPurchase extends Controller
 {
     public function Buy(Request $request)
     {
-        try {
-        \Log::info('BillPurchase::Buy HIT', [
-            'all_input' => $request->all(),
-            'auth_header' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : 'NONE',
-            'origin' => $request->headers->get('origin'),
-            'method' => $request->method(),
-            'url' => $request->fullUrl(),
-        ]);
-
+        try {\n
         $explode_url = explode(',', config('app.habukhan_app_key'));
         if (config('app.habukhan_device_key') == $request->header('Authorization')) {
             $validator = Validator::make($request->all(), [
@@ -183,13 +175,7 @@ class BillPurchase extends Controller
                                                                 else {
                                                                     \Log::error("BillPurchase Error: Method {$check_now} does not exist in MeterSend.");
                                                                     $customer_name = null;
-                                                                }
-                                                                \Log::info('BillPurchase: After meter verify', [
-                                                                    'method' => $check_now,
-                                                                    'customer_name' => $customer_name,
-                                                                    'bypass' => $request->bypass,
-                                                                ]);
-                                                                if ((empty($customer_name)) && ($request->bypass == false || $request->bypass == 'false')) {
+                                                                }\n                                                                if ((empty($customer_name)) && ($request->bypass == false || $request->bypass == 'false')) {
                                                                     return response()->json([
                                                                         'status' => 'fail',
                                                                         'message' => 'Invalid Meter Number'
@@ -233,19 +219,7 @@ class BillPurchase extends Controller
                                                                                 'username' => $user->username,
                                                                                 'plan_id' => $request->disco,
                                                                                 'transid' => $transid
-                                                                            ];
-                                                                            \Log::info('BillPurchase: Calling BillSend method', [
-                                                                                'method' => $check_now,
-                                                                                'bill_data' => $bill_data,
-                                                                                'bill_plan_habukhan1' => $bill_plan->habukhan1 ?? 'NULL',
-                                                                                'disco_name' => $bill_plan->disco_name,
-                                                                            ]);
-                                                                            $response = $billvend->$check_now($bill_data);
-                                                                            \Log::info('BillPurchase: BillSend response', [
-                                                                                'method' => $check_now,
-                                                                                'response' => $response,
-                                                                            ]);
-                                                                            if (!empty($response)) {
+                                                                            ];\n                                                                            $response = $billvend->$check_now($bill_data);\n                                                                            if (!empty($response)) {
                                                                                 if ($response == 'success') {
                                                                                     // --- SMART BENEFICIARY SAVE ---
                                                                                     try {

@@ -396,9 +396,7 @@ class AirtimeCash extends Controller
             ]);
         }
 
-        // Extensive Logging for debugging "Random Errors"
-        \Log::info("A2C Execute Response (" . $request->transid . "): " . json_encode($response));
-
+        // Extensive Logging for debugging "Random Errors"\n
         $msg = $response['data']['message'] ?? $response['message'] ?? 'Airtime conversion failed';
 
         // Map provider errors to user-friendly messages

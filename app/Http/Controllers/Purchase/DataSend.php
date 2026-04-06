@@ -1428,12 +1428,7 @@ class DataSend extends Controller
             curl_close($curl);
 
             // Log response and masked token for debugging
-            $masked_token = substr($other_api->easy_access, 0, 5) . "..." . substr($other_api->easy_access, -5);
-            \Log::info("EasyAccess Data Trace [$data[transid]]: ", [
-                'token_used' => $masked_token,
-                'response' => $response
-            ]);
-
+            $masked_token = substr($other_api->easy_access, 0, 5) . "..." . substr($other_api->easy_access, -5);\n
             if ($response) {
                 // The new API returns results inside a 'res' object
                 $res = $response['res'] ?? $response;
@@ -1757,9 +1752,7 @@ class DataSend extends Controller
 
     public static function SmartAttempt($primary_method, $data)
     {
-        // 1. Try Primary Vendor
-        \Log::info("🚨 SmartSwitch: Trying Primary - $primary_method");
-        if (method_exists(self::class, $primary_method)) {
+        // 1. Try Primary Vendor\n        if (method_exists(self::class, $primary_method)) {
             $response = self::$primary_method($data);
         } else {
             \Log::error("SmartSwitch: Method $primary_method does not exist.");
@@ -1767,9 +1760,7 @@ class DataSend extends Controller
         }
 
         // 2. If Failed, Trigger Failover
-        if ($response == 'fail') {
-            \Log::info("🚨 SmartSwitch: Primary Failed. Initiating Failover Scan...");
-            // Exclude primary from retry list
+        if ($response == 'fail') {\n            // Exclude primary from retry list
             return self::RetryLogic($data, [$primary_method]);
         }
 
@@ -1806,10 +1797,7 @@ class DataSend extends Controller
             }
 
             // Check if Plan ID is configured for this vendor
-            if (!empty($dataplan->$column)) {
-
-                \Log::info("🚨 SmartSwitch: Found Alternate - $method (ID: " . $dataplan->$column . ")");
-
+            if (!empty($dataplan->$column)) {\n
                 // Try this vendor
                 if (method_exists(self::class, $method)) {
                     $response = self::$method($data);
@@ -1819,12 +1807,8 @@ class DataSend extends Controller
                 }
 
                 // If success, return success immediately
-                if ($response == 'success') {
-                    \Log::info("🚨 SmartSwitch: FAILOVER SUCCESS with $method");
-                    return 'success';
-                } else {
-                    \Log::info("🚨 SmartSwitch: $method also failed.");
-                    $attempted_methods[] = $method;
+                if ($response == 'success') {\n                    return 'success';
+                } else {\n                    $attempted_methods[] = $method;
                 }
             }
         }

@@ -785,23 +785,10 @@ class AuthController extends Controller
                         $is_legacy_hash_match = ($hash == $user->password);
                         $is_md5_match = ($mdpass == $user->password);
 
-                        // Debug Log (Optimized: Uses cached values, prevents 2x Cost 16 calculation)
-                        \Log::info('Login Debug: User=' . $user->username . ', Type="' . $user->type . '", Status=' . $user->status . ', PlainMatch=' . ($is_plain_match ? 'YES' : 'NO') . ', HashMatch=' . ($is_bcrypt_match ? 'YES' : 'NO'));
-
                         // FIX: Replaced XOR chain with simple OR. If ANY credential match is valid, let them in.
                         if ($is_bcrypt_match || $is_plain_match || $is_legacy_hash_match || $is_md5_match) {
 
                             if ($user->status == 1 || trim(strtoupper($user->type)) == 'ADMIN' || strcasecmp($user->username, 'Habukhan') == 0) {
-                                \Log::info('Login Success Response for ' . $user->username . ': ' . json_encode([
-                                    'pointwave' => $user_details['pointwave'],
-                                    'pointwave_bank' => $user_details['pointwave_bank'],
-                                    'palmpay' => $user_details['opay'],
-                                    'kolomoni_mfb' => $user_details['kolomoni_mfb'],
-                                    'wema' => $user_details['wema'],
-                                    'account_number' => $user_details['account_number'],
-                                    'bank_name' => $user_details['bank_name'],
-                                    'default_account' => $user_details['default_account']
-                                ]));
                                 return response()->json([
                                     'status' => 'success',
                                     'message' => 'Login successfully',
@@ -836,7 +823,6 @@ class AuthController extends Controller
                                 ])->setStatusCode(403);
                             }
                         } else {
-                            \Log::warning('Login Failed: Password mismatch for User=' . $user->username);
                             return response()->json([
                                 'status' => 403,
                                 'message' => 'Invalid Password Note Password is Case Sensitive'

@@ -154,12 +154,7 @@ class IUCsend extends Controller
         $accessToken = base64_encode($adex_api->adex1_username . ":" . $adex_api->adex1_password);
         
         // Use authenticated request for verification since endpoint requires auth
-        $send_request = $api_website->adex_website1 . "/api/cable/cable-validation?iuc=" . $data['iuc'] . "&cable=" . $data['cable'];
-        
-        \Log::info('Adex1 Cable Verification Request:', [
-            'url' => $send_request
-        ]);
-        
+        $send_request = $api_website->adex_website1 . "/api/cable/cable-validation?iuc=" . $data['iuc'] . "&cable=" . $data['cable'];\n        
         // Step 1: Get AccessToken using Basic Authentication
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $api_website->adex_website1 . "/api/user/");
@@ -188,10 +183,7 @@ class IUCsend extends Controller
             $response_data = curl_exec($ch);
             curl_close($ch);
             
-            $response = json_decode($response_data, true);
-            
-            \Log::info('Adex1 Cable Verification Response:', ['response' => $response]);
-            
+            $response = json_decode($response_data, true);\n            
             if (!empty($response)) {
                 if (!empty($response['name'])) {
                     return $response['name'];

@@ -240,12 +240,7 @@ class ExamSend extends Controller
             curl_close($curl);
 
             // Log response for debugging
-            $masked_token = substr($habukhan_api->easy_access, 0, 5) . "..." . substr($habukhan_api->easy_access, -5);
-            \Log::info("EasyAccess Exam Pins Trace [$data[transid]]: ", [
-                'token_used' => $masked_token,
-                'response' => $response
-            ]);
-
+            $masked_token = substr($habukhan_api->easy_access, 0, 5) . "..." . substr($habukhan_api->easy_access, -5);\n
             if ($response) {
                 $res = $response['res'] ?? $response;
                 $status = strtolower($res['status'] ?? '');

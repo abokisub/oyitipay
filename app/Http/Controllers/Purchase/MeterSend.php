@@ -132,10 +132,7 @@ class MeterSend extends Controller
         $adex_api = DB::table('adex_api')->first();
         $accessToken = base64_encode($adex_api->adex1_username . ":" . $adex_api->adex1_password);
         
-        $send_request = $api_website->adex_website1 . "/api/bill/bill-validation?meter_type=" . $data['meter_type'] . "&meter_number=" . $data['meter_number'] . "&disco=" . ($bill_plan->adex1 ?? $bill_plan->habukhan1);
-        
-        \Log::info('Adex1 Meter Verification Request:', ['url' => $send_request]);
-        
+        $send_request = $api_website->adex_website1 . "/api/bill/bill-validation?meter_type=" . $data['meter_type'] . "&meter_number=" . $data['meter_number'] . "&disco=" . ($bill_plan->adex1 ?? $bill_plan->habukhan1);\n        
         // Get AccessToken
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $api_website->adex_website1 . "/api/user/");
@@ -159,10 +156,7 @@ class MeterSend extends Controller
             $response_data = curl_exec($ch);
             curl_close($ch);
             
-            $response = json_decode($response_data, true);
-            
-            \Log::info('Adex1 Meter Verification Response:', ['response' => $response]);
-            
+            $response = json_decode($response_data, true);\n            
             if (!empty($response) && !empty($response['name'])) {
                 return $response['name'];
             }

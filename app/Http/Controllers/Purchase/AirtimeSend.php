@@ -34,14 +34,8 @@ class AirtimeSend extends Controller
             ];
 
             // Store reference immediately
-            DB::table('airtime')->where('transid', $data['transid'])->update(['api_reference' => $reference]);
-
-            \Log::info('Autopilot Airtime REQUEST:', ['payload' => $payload, 'transid' => $data['transid']]);
-
-            $response = (new Controller)->autopilot_request('/v1/airtime', $payload);
-
-            \Log::info('Autopilot Airtime RESPONSE:', ['response' => $response, 'transid' => $data['transid']]);
-
+            DB::table('airtime')->where('transid', $data['transid'])->update(['api_reference' => $reference]);\n
+            $response = (new Controller)->autopilot_request('/v1/airtime', $payload);\n
             if (!empty($response)) {
                 // Autopilot uses both 'status' and 'code' fields
                 // Success: status=true AND code=200
@@ -50,19 +44,11 @@ class AirtimeSend extends Controller
                 $status = $response['status'] ?? false;
                 $code = $response['code'] ?? 0;
 
-                if ($status == true && $code == 200) {
-                    \Log::info('Autopilot Airtime: Returning SUCCESS', ['transid' => $data['transid']]);
-                    return 'success';
-                } else if ($status == false || $code == 424) {
-                    \Log::info('Autopilot Airtime: Returning FAIL', ['transid' => $data['transid'], 'code' => $code, 'message' => $response['data']['message'] ?? 'No message']);
-                    return 'fail';
-                } else {
-                    \Log::info('Autopilot Airtime: Returning PROCESS (code=' . $code . ')', ['transid' => $data['transid'], 'response' => $response]);
-                    return 'process';
+                if ($status == true && $code == 200) {\n                    return 'success';
+                } else if ($status == false || $code == 424) {\n                    return 'fail';
+                } else {\n                    return 'process';
                 }
-            } else {
-                \Log::info('Autopilot Airtime: Returning PROCESS (empty response)', ['transid' => $data['transid']]);
-            }
+            } else {\n            }
             return 'process';
         } else {
             return 'fail';
@@ -888,11 +874,7 @@ class AirtimeSend extends Controller
                 'Content-Type: application/json'
             ];
 
-            // Log for debugging
-            \Log::info('VTPass Airtime SENDING:', ['url' => $endpoints, 'payload' => $paypload]);
-            $response = ApiSending::OTHERAPI($endpoints, $paypload, $headers);
-            \Log::info('VTPass Airtime RECEIVED:', ['response' => $response]);
-
+            // Log for debugging\n            $response = ApiSending::OTHERAPI($endpoints, $paypload, $headers);\n
             // declare plan status
             if (!empty($response)) {
                 $code = $response['code'] ?? '';
@@ -969,9 +951,7 @@ class AirtimeSend extends Controller
 
             $response = ApiSending::BoltNetApi($endpoint_details, $payload);
 
-            // Log for debugging BoltNet status
-            \Log::info('BoltNet Airtime Response:', ['response' => $response]);
-
+            // Log for debugging BoltNet status\n
             if (!empty($response)) {
                 $res = $response['response'] ?? $response;
                 $status = strtolower($res['Status'] ?? $res['status'] ?? '');
@@ -1006,9 +986,7 @@ class AirtimeSend extends Controller
             $accessToken = base64_encode($adex_api->adex1_username . ":" . $adex_api->adex1_password);
             
             // Format phone number for Adex API (they expect 11 digits Nigerian format)
-            $phone = $sendRequest->plan_phone;
-            \Log::info('Adex1 Phone Before Format:', ['original_phone' => $phone]);
-            
+            $phone = $sendRequest->plan_phone;\n            
             // Ensure it's 11 digits starting with 0
             if (substr($phone, 0, 3) == '234') {
                 $phone = '0' . substr($phone, 3); // Convert 2347040540018 to 07040540018
@@ -1016,10 +994,7 @@ class AirtimeSend extends Controller
             // If it doesn't start with 0, add it
             if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
                 $phone = '0' . $phone; // Convert 7040540018 to 07040540018
-            }
-            
-            \Log::info('Adex1 Phone After Format:', ['formatted_phone' => $phone]);
-            
+            }\n            
             // Use proper Adex network ID (1 for MTN according to Adex docs)
             $adex_network_id = 1; // Default to MTN
             if (strtoupper($sendRequest->network) == 'AIRTEL') {
@@ -1045,17 +1020,10 @@ class AirtimeSend extends Controller
                 'accessToken' => $accessToken
             ];
             
-            // Log the payload for debugging
-            \Log::info('Adex1 Airtime Request:', [
-                'payload' => $paypload,
-                'endpoint' => $admin_details['endpoint']
-            ]);
-            
+            // Log the payload for debugging\n            
             $response = ApiSending::AdexApi($admin_details, $paypload);
             
-            // Log the response for debugging
-            \Log::info('Adex1 Airtime Response:', ['response' => $response]);
-            
+            // Log the response for debugging\n            
             if (!empty($response)) {
                 if ($response['status'] == 'success') {
                     if (isset($response['response'])) {
@@ -1091,19 +1059,14 @@ class AirtimeSend extends Controller
             $accessToken = base64_encode($adex_api->adex2_username . ":" . $adex_api->adex2_password);
             
             // Format phone number for Adex API (they expect 11 digits Nigerian format)
-            $phone = $sendRequest->plan_phone;
-            \Log::info('Adex2 Phone Before Format:', ['original_phone' => $phone]);
-            
+            $phone = $sendRequest->plan_phone;\n            
             // Ensure it's 11 digits starting with 0
             if (substr($phone, 0, 3) == '234') {
                 $phone = '0' . substr($phone, 3);
             }
             if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
                 $phone = '0' . $phone;
-            }
-            
-            \Log::info('Adex2 Phone After Format:', ['formatted_phone' => $phone]);
-            
+            }\n            
             // Use proper Adex network ID (1 for MTN according to Adex docs)
             $adex_network_id = 1; // Default to MTN
             if (strtoupper($sendRequest->network) == 'AIRTEL') {
@@ -1163,19 +1126,14 @@ class AirtimeSend extends Controller
             $accessToken = base64_encode($adex_api->adex3_username . ":" . $adex_api->adex3_password);
             
             // Format phone number for Adex API (they expect 11 digits Nigerian format)
-            $phone = $sendRequest->plan_phone;
-            \Log::info('Adex3 Phone Before Format:', ['original_phone' => $phone]);
-            
+            $phone = $sendRequest->plan_phone;\n            
             // Ensure it's 11 digits starting with 0
             if (substr($phone, 0, 3) == '234') {
                 $phone = '0' . substr($phone, 3);
             }
             if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
                 $phone = '0' . $phone;
-            }
-            
-            \Log::info('Adex3 Phone After Format:', ['formatted_phone' => $phone]);
-            
+            }\n            
             // Use proper Adex network ID (1 for MTN according to Adex docs)
             $adex_network_id = 1; // Default to MTN
             if (strtoupper($sendRequest->network) == 'AIRTEL') {
@@ -1235,19 +1193,14 @@ class AirtimeSend extends Controller
             $accessToken = base64_encode($adex_api->adex4_username . ":" . $adex_api->adex4_password);
             
             // Format phone number for Adex API (they expect 11 digits Nigerian format)
-            $phone = $sendRequest->plan_phone;
-            \Log::info('Adex4 Phone Before Format:', ['original_phone' => $phone]);
-            
+            $phone = $sendRequest->plan_phone;\n            
             // Ensure it's 11 digits starting with 0
             if (substr($phone, 0, 3) == '234') {
                 $phone = '0' . substr($phone, 3);
             }
             if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
                 $phone = '0' . $phone;
-            }
-            
-            \Log::info('Adex4 Phone After Format:', ['formatted_phone' => $phone]);
-            
+            }\n            
             // Use proper Adex network ID (1 for MTN according to Adex docs)
             $adex_network_id = 1; // Default to MTN
             if (strtoupper($sendRequest->network) == 'AIRTEL') {
@@ -1307,19 +1260,14 @@ class AirtimeSend extends Controller
             $accessToken = base64_encode($adex_api->adex5_username . ":" . $adex_api->adex5_password);
             
             // Format phone number for Adex API (they expect 11 digits Nigerian format)
-            $phone = $sendRequest->plan_phone;
-            \Log::info('Adex5 Phone Before Format:', ['original_phone' => $phone]);
-            
+            $phone = $sendRequest->plan_phone;\n            
             // Ensure it's 11 digits starting with 0
             if (substr($phone, 0, 3) == '234') {
                 $phone = '0' . substr($phone, 3);
             }
             if (substr($phone, 0, 1) != '0' && strlen($phone) == 10) {
                 $phone = '0' . $phone;
-            }
-            
-            \Log::info('Adex5 Phone After Format:', ['formatted_phone' => $phone]);
-            
+            }\n            
             // Use proper Adex network ID (1 for MTN according to Adex docs)
             $adex_network_id = 1; // Default to MTN
             if (strtoupper($sendRequest->network) == 'AIRTEL') {

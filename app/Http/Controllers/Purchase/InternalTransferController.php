@@ -42,12 +42,6 @@ class InternalTransferController extends Controller
             }
         }
 
-        \Log::info('Internal Transfer: Verifying user', [
-            'identifier' => $identifier,
-            'phone_variant1' => $phone_variant1,
-            'phone_variant2' => $phone_variant2,
-        ]);
-
         // Search by username, email, or phone variants
         $user = DB::table('user')
             ->where('username', $identifier)
@@ -57,13 +51,6 @@ class InternalTransferController extends Controller
         })
             ->select('id', 'username', 'name', 'phone')
             ->first();
-
-        \Log::info('Internal Transfer: User search result', [
-            'found' => $user ? true : false,
-            'user_id' => $user->id ?? null,
-            'username' => $user->username ?? null,
-            'phone' => $user->phone ?? null,
-        ]);
 
         if ($user) {
             return response()->json([
