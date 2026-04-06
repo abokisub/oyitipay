@@ -45,10 +45,20 @@ class PaymentController extends Controller
         $data = json_decode($payload, true);
 
         // Retrieve key data from the payload
-        $status = $data['notification_status'];
+        $status = $data['notification_status'] ?? '';
         $amount_paid = floatval($data['amount_paid']);
         $reference = $data['transaction_id'];
-        $customer_email = $data['customer']['email'];
+        $customer_email = $data['customer']['email'] ?? null;
+
+        // Only process successful payments
+        if ($status !== 'payment_successful' && $status !== 'successful') {
+            return response()->json('Not a payment event', 200);
+        }
+
+        if (!$customer_email) {
+            \Log::error('Xixapay Webhook: Missing customer email', ['data' => $data]);
+            return response()->json('Missing email', 400);
+        }
 
         // Check if the transaction reference already exists
         if (DB::table('deposit')->where('monify_ref', $reference)->exists()) {
