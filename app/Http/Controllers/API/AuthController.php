@@ -789,7 +789,12 @@ class AuthController extends Controller
                             'default_account' => $active_default,
                             'account_name' => isset($user->account_name) ? $user->account_name : null,
                             'is_bvn' => $user->bvn == null ? false : true,
-                            'theme' => DB::table('user_settings')->where('user_id', $user->id)->value('theme') ?? 'light'
+                            'theme' => DB::table('user_settings')->where('user_id', $user->id)->value('theme') ?? 'light',
+                            
+                            // Add virtual accounts for mobile app
+                            'meta_data' => [
+                                'virtual_accounts' => $this->getUserVirtualAccounts($user->username)
+                            ]
                         ];
                         $hash = substr(sha1(md5($request->password)), 3, 10);
                         $mdpass = md5($request->password);
