@@ -189,6 +189,157 @@ class WebhookController extends Controller
     }
 
     /**
+     * Paystack Dedicated Virtual Account Webhook
+     * Handles automatic wallet funding when users transfer to their Wema Bank account
+     */
+    public function paystackDedicatedAccountWebhook(Request $request)
+    {
+        try {
+            // Get raw payload
+            $payload = $request->all();
+            \Log::info("💰 Paystack DVA Webhook Received:", $payload);
+
+            // Verify signature (important for security)
+            $signature = $request->header('x-paystack-signature');
+            $paystackKey = DB::table('paystack_key')->first();
+            
+            if (!$paystackKey || empty($paystackKey->live)) {
+                // Try habukhan_key table
+                $habukhanKey = DB::table('habukhan_key')->first();
+                $secretKey = $habukhanKey->psk ?? config('app.paystack_secret_key');
+            } else {
+                $secretKey = $paystackKey->live;
+            }
+
+            if ($signature && $secretKey) {
+                $calculatedSignature = hash_hmac('sha512', file_get_contents("php://input"), $secretKey);
+                if (!hash_equals($calculatedSignature, $signature)) {
+                    \Log::warning("💰 Paystack DVA: Invalid signature");
+                    return response()->json(['status' => 'error', 'message' => 'Invalid signature'], 400);
+                }
+            }
+
+            $event = $payload['event'] ?? '';
+
+            // Handle charge.success event (when money is received)
+            if ($event === 'charge.success') {
+                $data = $payload['data'] ?? [];
+                
+                // Check if it's a bank transfer (dedicated virtual account)
+                if (($data['channel'] ?? '') !== 'dedicated_nuban') {
+                    \Log::info("💰 Paystack: Not a dedicated account transfer, ignoring");
+                    return response()->json(['status' => 'ignored']);
+                }
+
+                $accountNumber = $data['authorization']['receiver_bank_account_number'] ?? null;
+                $amount = ($data['amount'] ?? 0) / 100; // Convert from kobo to naira
+                $reference = $data['reference'] ?? null;
+                $customerEmail = $data['customer']['email'] ?? null;
+
+                if (!$accountNumber || !$amount || !$reference) {
+                    \Log::warning("💰 Paystack DVA: Missing required fields");
+                    return response()->json(['status' => 'error', 'message' => 'Missing fields'], 400);
+                }
+
+                // Find user by account number
+                $user = DB::table('user')->where('paystack_account', $accountNumber)->first();
+
+                if (!$user) {
+                    \Log::warning("💰 Paystack DVA: User not found for account $accountNumber");
+                    return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+                }
+
+                // Check for duplicate transaction (idempotency)
+                $existingDeposit = DB::table('deposit')->where('monify_ref', $reference)->first();
+                if ($existingDeposit) {
+                    \Log::info("💰 Paystack DVA: Duplicate transaction $reference, ignoring");
+                    return response()->json(['status' => 'success', 'message' => 'Already processed']);
+                }
+
+                // Get Paystack charge settings
+                $settings = DB::table('settings')->first();
+                $paystackCharge = $settings->paystack_charge ?? 0;
+                
+                // Calculate net amount after charge
+                $netAmount = $amount - $paystackCharge;
+                if ($netAmount < 0) {
+                    $netAmount = 0;
+                }
+
+                // Credit user wallet
+                DB::transaction(function () use ($user, $amount, $netAmount, $reference, $paystackCharge) {
+                    $oldBalance = $user->bal;
+                    $newBalance = $oldBalance + $netAmount;
+
+                    // Update user balance
+                    DB::table('user')->where('id', $user->id)->update(['bal' => $newBalance]);
+
+                    // Record deposit
+                    DB::table('deposit')->insert([
+                        'username' => $user->username,
+                        'amount' => $amount,
+                        'oldbal' => $oldBalance,
+                        'newbal' => $newBalance,
+                        'wallet_type' => 'User Wallet',
+                        'type' => 'Paystack Funding',
+                        'credit_by' => 'Paystack',
+                        'date' => now(),
+                        'status' => 1,
+                        'transid' => $reference,
+                        'charges' => $paystackCharge,
+                        'monify_ref' => $reference,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+
+                    // Record in message/history
+                    $message = "✅ Wallet Funded via Paystack\n\n";
+                    $message .= "Amount: ₦" . number_format($amount, 2) . "\n";
+                    if ($paystackCharge > 0) {
+                        $message .= "Charge: ₦" . number_format($paystackCharge, 2) . "\n";
+                        $message .= "Net Credit: ₦" . number_format($netAmount, 2) . "\n";
+                    }
+                    $message .= "Reference: $reference\n";
+                    $message .= "New Balance: ₦" . number_format($newBalance, 2);
+
+                    DB::table('message')->insert([
+                        'username' => $user->username,
+                        'amount' => $netAmount,
+                        'message' => $message,
+                        'oldbal' => $oldBalance,
+                        'newbal' => $newBalance,
+                        'transid' => $reference,
+                        'date' => now(),
+                        'plan_status' => 1,
+                        'mes' => "Your wallet has been credited with ₦" . number_format($netAmount, 2) . " via Paystack."
+                    ]);
+
+                    // Send notification
+                    (new \App\Services\NotificationService())->sendWalletCreditNotification(
+                        $user, 
+                        $netAmount, 
+                        'Paystack', 
+                        $reference
+                    );
+
+                    \Log::info("💰 Paystack DVA: Credited ₦$netAmount to {$user->username} (Ref: $reference)");
+                });
+
+                return response()->json(['status' => 'success', 'message' => 'Wallet credited']);
+            }
+
+            // Ignore other events
+            return response()->json(['status' => 'ignored', 'message' => 'Event not handled']);
+
+        } catch (\Exception $e) {
+            \Log::error("💰 Paystack DVA Webhook Error: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Unified Bank Transfer Webhook Handler (Paystack / Xixapay)
      * Single Source of Truth for Transfer Status.
      */

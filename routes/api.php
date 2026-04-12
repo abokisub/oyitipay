@@ -138,6 +138,10 @@ Route::get('/banks/sync', [Banks::class , 'syncBanks']);
 // URL: https://[domain]/api/webhook/transfer/xixapay
 Route::post('/webhook/transfer/{provider}', [WebhookController::class , 'transferWebhook']);
 
+// Paystack Dedicated Virtual Account Webhook
+// URL: https://[domain]/api/webhook/paystack/dva
+Route::post('/webhook/paystack/dva', [WebhookController::class , 'paystackDedicatedAccountWebhook']);
+
 Route::post('upgrade/api/user', [AppController::class , 'apiUpgrade']);
 Route::get('/user/resend/{id}/otp', [AuthController::class , 'resendOtp']);
 Route::post('/website/affliate/user', [AppController::class , 'buildWebsite']);
@@ -396,6 +400,7 @@ Route::post('atmfunding/habukhan/secure/{id}/secure', [PaymentController::class 
 Route::any('xixapay_webhook/secure/callback/pay/habukhan/0001', [PaymentController::class , 'Xixapay']);
 Route::post('paystack/habukhan/secure/{id}/secure', [PaymentController::class , 'Paystackfunding']);
 Route::get('callback/paystack', [PaymentController::class , 'PaystackCallBack']);
+Route::post('paystack/requery/account', [PaymentController::class , 'requeryPaystackDVA'])->middleware(['auth.token']);
 
 Route::post('update-kyc-here/habukhan/secure', [PaymentController::class , 'UpdateKYC']);
 Route::post('dynamic-account-number-here/habukhan/secure', [PaymentController::class , 'DynamicAccount']);

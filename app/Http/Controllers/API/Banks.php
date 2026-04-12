@@ -119,20 +119,29 @@ class Banks extends Controller
                     }
                 }
 
-                // 3. Wema (using standardized paystack_account)
-                if (!is_null($auth_user->paystack_account) && $wema_enabled) {
-                    $bank = [
-                        "name" => "WEMA BANK",
-                        "account" => $auth_user->paystack_account,
-                        "accountType" => false,
-                        'charges' => $paystack_charge . ' NAIRA',
-                        'provider' => 'wema'
-                    ];
-                    
-                    if ($default_provider === 'wema') {
-                        $default_bank = $bank;
-                    } else {
-                        $banks_array[] = $bank;
+                // 3. Paystack Accounts (Titan and Wema from user_bank table)
+                if ($wema_enabled) {
+                    // Get all Paystack accounts from user_bank
+                    $paystackAccounts = DB::table('user_bank')
+                        ->where('username', $auth_user->username)
+                        ->whereIn('bank', ['PAYSTACK-TITAN', 'WEMA BANK'])
+                        ->get();
+
+                    foreach ($paystackAccounts as $paystackAcc) {
+                        $bank = [
+                            "name" => $paystackAcc->bank,
+                            "account" => $paystackAcc->account_number,
+                            "accountType" => false,
+                            'charges' => $paystack_charge . ' NAIRA',
+                            'provider' => strtolower($paystackAcc->bank) === 'paystack-titan' ? 'titan' : 'wema'
+                        ];
+                        
+                        // Set Titan as default if it's the default provider
+                        if ($default_provider === 'wema' && strtolower($paystackAcc->bank) === 'paystack-titan') {
+                            $default_bank = $bank;
+                        } else {
+                            $banks_array[] = $bank;
+                        }
                     }
                 }
 

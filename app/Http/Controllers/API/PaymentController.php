@@ -854,6 +854,49 @@ class PaymentController extends Controller
             return redirect(config('app.error_500'));
         }
     }
+
+    /**
+     * Manually requery Paystack dedicated virtual account for pending transactions
+     * Useful when webhook is delayed or failed
+     */
+    public function requeryPaystackDVA(Request $request)
+    {
+        $user = DB::table('user')->where('id', $request->user()->id ?? 0)->first();
+        
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        if (empty($user->paystack_account)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No Paystack account found. Please contact support.'
+            ], 400);
+        }
+
+        // Optional: Check if user provided a specific date
+        $date = $request->date ?? null; // Format: YYYY-MM-DD
+
+        $result = $this->requeryPaystackAccount($user->username, $date);
+
+        if ($result['status'] === 'success') {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Requery initiated. If you have pending transfers, they will be processed shortly.',
+                'account_number' => $user->paystack_account,
+                'bank' => $user->paystack_bank ?? 'Wema Bank'
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => $result['message'] ?? 'Requery failed'
+            ], 400);
+        }
+    }
+
     public function VDFWEBHOOK(Request $request)
     {
 

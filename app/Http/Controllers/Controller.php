@@ -624,8 +624,233 @@ class Controller extends BaseController
 
     public function paystack_account($username)
     {
-        // Disabled until Paystack live API key is configured
-        return false;
+        $user = DB::table('user')->where('username', $username)->first();
+        
+        if (!$user) {
+            \Log::error("Paystack: User not found - $username");
+            return false;
+        }
+
+        // Check if user already has a Paystack account
+        if (!empty($user->paystack_account)) {
+            \Log::info("Paystack: User $username already has account: {$user->paystack_account}");
+            return true;
+        }
+
+        try {
+            // Get Paystack secret key - check multiple sources
+            $secretKey = null;
+            
+            // Try paystack_key table first
+            $paystackKey = DB::table('paystack_key')->first();
+            if ($paystackKey && !empty($paystackKey->live) && $paystackKey->live !== 'sk_test_placeholder') {
+                $secretKey = $paystackKey->live;
+            }
+            
+            // Fallback to habukhan_key table
+            if (empty($secretKey)) {
+                $habukhanKey = DB::table('habukhan_key')->first();
+                if ($habukhanKey && !empty($habukhanKey->psk)) {
+                    $secretKey = $habukhanKey->psk;
+                }
+            }
+            
+            // Final fallback to config
+            if (empty($secretKey)) {
+                $secretKey = config('app.paystack_secret_key');
+            }
+
+            if (empty($secretKey)) {
+                \Log::error("Paystack: Secret key not configured");
+                return false;
+            }
+
+            \Log::info("Paystack: Creating dedicated virtual account for $username");
+
+            // Step 1: Create or get customer
+            $nameParts = explode(' ', $user->name, 2);
+            $customerData = [
+                'email' => $user->email,
+                'first_name' => $nameParts[0] ?? 'User',
+                'last_name' => $nameParts[1] ?? 'Account',
+                'phone' => $user->phone ?? ''
+            ];
+
+            $customerResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $secretKey,
+                'Content-Type' => 'application/json'
+            ])->post('https://api.paystack.co/customer', $customerData);
+
+            $customerCode = null;
+
+            if ($customerResponse->successful()) {
+                $customerCode = $customerResponse->json()['data']['customer_code'];
+            } else {
+                // Customer might already exist, try to fetch by email
+                $fetchResponse = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $secretKey,
+                    'Content-Type' => 'application/json'
+                ])->get('https://api.paystack.co/customer/' . urlencode($user->email));
+
+                if ($fetchResponse->successful()) {
+                    $customerCode = $fetchResponse->json()['data']['customer_code'];
+                } else {
+                    \Log::error("Paystack: Failed to create/fetch customer for $username", [
+                        'create_error' => $customerResponse->json(),
+                        'fetch_error' => $fetchResponse->json()
+                    ]);
+                    return false;
+                }
+            }
+
+            \Log::info("Paystack: Customer code for $username: $customerCode");
+
+            // Get preferred bank from settings (default to titan-paystack for faster processing)
+            $settings = DB::table('settings')->first();
+            $preferredBank = $settings->paystack_preferred_bank ?? 'titan-paystack';
+
+            // Step 2: Create dedicated virtual account
+            $accountData = [
+                'customer' => $customerCode,
+                'preferred_bank' => $preferredBank // titan-paystack or wema-bank
+            ];
+
+            $accountResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $secretKey,
+                'Content-Type' => 'application/json'
+            ])->post('https://api.paystack.co/dedicated_account', $accountData);
+
+            if ($accountResponse->successful()) {
+                $accountInfo = $accountResponse->json()['data'];
+                $accountNumber = $accountInfo['account_number'];
+                $accountName = $accountInfo['account_name'];
+                $bankName = $accountInfo['bank']['name'];
+                $bankSlug = $accountInfo['bank']['slug'] ?? $preferredBank;
+
+                \Log::info("Paystack: Virtual account created for $username", [
+                    'account_number' => $accountNumber,
+                    'account_name' => $accountName,
+                    'bank' => $bankName,
+                    'bank_slug' => $bankSlug
+                ]);
+
+                // Update user record
+                DB::table('user')->where('username', $username)->update([
+                    'paystack_account' => $accountNumber,
+                    'paystack_bank' => $bankName
+                ]);
+
+                // Add to user_bank table
+                DB::table('user_bank')->updateOrInsert(
+                    ['username' => $username, 'bank' => strtoupper($bankName)],
+                    [
+                        'account_number' => $accountNumber,
+                        'bank_name' => $accountName,
+                        'bank' => strtoupper($bankName),
+                        'date' => now()->toDateTimeString()
+                    ]
+                );
+
+                return true;
+            } else {
+                $error = $accountResponse->json();
+                \Log::error("Paystack: Failed to create dedicated account for $username", [
+                    'error' => $error,
+                    'status' => $accountResponse->status()
+                ]);
+                return false;
+            }
+
+        } catch (\Exception $e) {
+            \Log::error("Paystack: Exception creating account for $username", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Requery Paystack Dedicated Virtual Account for pending transactions
+     * Useful as backup when webhook fails or is delayed
+     */
+    public function requeryPaystackAccount($username, $date = null)
+    {
+        $user = DB::table('user')->where('username', $username)->first();
+        
+        if (!$user || empty($user->paystack_account)) {
+            \Log::error("Paystack Requery: User $username has no Paystack account");
+            return ['status' => 'error', 'message' => 'No Paystack account found'];
+        }
+
+        try {
+            // Get Paystack secret key
+            $secretKey = null;
+            
+            $paystackKey = DB::table('paystack_key')->first();
+            if ($paystackKey && !empty($paystackKey->live) && $paystackKey->live !== 'sk_test_placeholder') {
+                $secretKey = $paystackKey->live;
+            }
+            
+            if (empty($secretKey)) {
+                $habukhanKey = DB::table('habukhan_key')->first();
+                if ($habukhanKey && !empty($habukhanKey->psk)) {
+                    $secretKey = $habukhanKey->psk;
+                }
+            }
+
+            if (empty($secretKey)) {
+                return ['status' => 'error', 'message' => 'Paystack key not configured'];
+            }
+
+            \Log::info("Paystack Requery: Checking account {$user->paystack_account} for $username");
+
+            // Build query parameters
+            $params = [
+                'account_number' => $user->paystack_account,
+                'provider_slug' => 'wema-bank'
+            ];
+
+            // Add date if provided (format: YYYY-MM-DD)
+            if ($date) {
+                $params['date'] = $date;
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $secretKey,
+                'Content-Type' => 'application/json'
+            ])->get('https://api.paystack.co/dedicated_account/requery', $params);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                \Log::info("Paystack Requery: Success for $username", $data);
+                
+                return [
+                    'status' => 'success',
+                    'message' => $data['message'] ?? 'Requery initiated',
+                    'data' => $data['data'] ?? null
+                ];
+            } else {
+                $error = $response->json();
+                \Log::warning("Paystack Requery: Failed for $username", $error);
+                
+                return [
+                    'status' => 'error',
+                    'message' => $error['message'] ?? 'Requery failed',
+                    'error' => $error
+                ];
+            }
+
+        } catch (\Exception $e) {
+            \Log::error("Paystack Requery: Exception for $username", [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ];
+        }
     }
 
     /**
