@@ -359,6 +359,7 @@ class AuthController extends Controller
                     // $this->insert_stock($user->username); // Optimize stock check if needed
                     $user = DB::table('user')->where(['id' => $user->id])->first();
                     $moniepoint_acc = optional(DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first())->account_number ?? null;
+                    $wema_acc = optional(DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'WEMA BANK'])->first())->account_number ?? null;
 
                     $user_details = [
                         'username' => $user->username,
@@ -374,7 +375,7 @@ class AuthController extends Controller
                         // Only show if enabled
                         'sterlen' => $moniepoint_acc,
                         'fed' => null,
-                        'wema' => $user->paystack_account,
+                        'wema' => $wema_acc,
                         'opay' => $xixapay_enabled ? $user->opay : null,
                         'kolomoni_mfb' => $user->kolomoni_mfb,
                         'palmpay' => $user->palmpay,
@@ -728,6 +729,8 @@ class AuthController extends Controller
                         $user = DB::table('user')->where(['id' => $user->id])->first();
                         $moniepoint_row = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first();
                         $moniepoint_acc = $moniepoint_row ? $moniepoint_row->account_number : null;
+                        $wema_row = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'WEMA BANK'])->first();
+                        $wema_acc = $wema_row ? $wema_row->account_number : null;
 
                         $user_details = [
                             'username' => $user->username,
@@ -744,7 +747,7 @@ class AuthController extends Controller
                             // Conditionals
                             'sterlen' => $moniepoint_acc,
                             'fed' => null,
-                            'wema' => $user->paystack_account,
+                            'wema' => $wema_acc,
                             'opay' => $xixapay_enabled ? $user->palmpay : null,
                             'kolomoni_mfb' => $xixapay_enabled ? $user->kolomoni_mfb : null,
                             'palmpay' => null,
