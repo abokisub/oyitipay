@@ -221,7 +221,12 @@ class AuthController extends Controller
                             'apikey' => $user->apikey,
                             'default_account' => $active_default,
                             'is_bvn' => $user->bvn == null ? false : true,
-                            'theme' => DB::table('user_settings')->where('user_id', $user->id)->value('theme') ?? 'light'
+                            'theme' => DB::table('user_settings')->where('user_id', $user->id)->value('theme') ?? 'light',
+                            
+                            // Add virtual accounts for mobile app
+                            'meta_data' => [
+                                'virtual_accounts' => $this->getUserVirtualAccounts($user->username)
+                            ]
                         ];
 
                         $token = $this->generatetoken($user->id);
@@ -404,7 +409,12 @@ class AuthController extends Controller
                         'apikey' => $user->apikey,
                         'default_account' => $active_default,
                         'is_bvn' => $user->bvn == null ? false : true,
-                        'theme' => DB::table('user_settings')->where('user_id', $user->id)->value('theme') ?? 'light'
+                        'theme' => DB::table('user_settings')->where('user_id', $user->id)->value('theme') ?? 'light',
+                        
+                        // Add virtual accounts for mobile app
+                        'meta_data' => [
+                            'virtual_accounts' => $this->getUserVirtualAccounts($user->username)
+                        ]
                     ];
 
                     if ($user->status == 0) {
@@ -1331,5 +1341,79 @@ class AuthController extends Controller
             \Log::error("Update VA Status Error: " . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => 'Service Unavailable'], 500);
         }
+    }
+}
+
+    /**
+     * Get user's virtual accounts in format expected by mobile app
+     */
+    private function getUserVirtualAccounts($username)
+    {
+        $accounts = [];
+        $settings = DB::table('settings')->first();
+        
+        // Get all accounts from user_bank table
+        $userBanks = DB::table('user_bank')
+            ->where('username', $username)
+            ->get();
+        
+        foreach ($userBanks as $bank) {
+            $provider = 'unknown';
+            
+            // Determine provider based on bank name
+            if (stripos($bank->bank, 'TITAN') !== false || stripos($bank->bank, 'PAYSTACK') !== false) {
+                $provider = 'titan';
+            } elseif (stripos($bank->bank, 'WEMA') !== false) {
+                $provider = 'wema';
+            } elseif (stripos($bank->bank, 'MONIEPOINT') !== false) {
+                $provider = 'monnify';
+            } elseif (stripos($bank->bank, 'PALMPAY') !== false) {
+                $provider = 'palmpay';
+            } elseif (stripos($bank->bank, 'KOLOMONI') !== false) {
+                $provider = 'xixapay';
+            }
+            
+            $accounts[] = [
+                'provider' => $provider,
+                'bank_name' => $bank->bank,
+                'account_number' => $bank->account_number,
+                'account_name' => $bank->bank_name ?? null
+            ];
+        }
+        
+        // Also add accounts from user table if not in user_bank
+        $user = DB::table('user')->where('username', $username)->first();
+        
+        // Add PalmPay if exists and not already in list
+        if (!empty($user->palmpay) && !collect($accounts)->where('account_number', $user->palmpay)->count()) {
+            $accounts[] = [
+                'provider' => 'palmpay',
+                'bank_name' => 'PALMPAY',
+                'account_number' => $user->palmpay,
+                'account_name' => null
+            ];
+        }
+        
+        // Add Kolomoni if exists and not already in list
+        if (!empty($user->kolomoni_mfb) && !collect($accounts)->where('account_number', $user->kolomoni_mfb)->count()) {
+            $accounts[] = [
+                'provider' => 'xixapay',
+                'bank_name' => 'KOLOMONI MFB',
+                'account_number' => $user->kolomoni_mfb,
+                'account_name' => null
+            ];
+        }
+        
+        // Add PointWave if exists and not already in list
+        if (!empty($user->pointwave_account_number) && !collect($accounts)->where('account_number', $user->pointwave_account_number)->count()) {
+            $accounts[] = [
+                'provider' => 'pointwave',
+                'bank_name' => $user->pointwave_bank_name ?? 'PALMPAY BANKS',
+                'account_number' => $user->pointwave_account_number,
+                'account_name' => null
+            ];
+        }
+        
+        return $accounts;
     }
 }
