@@ -1342,7 +1342,6 @@ class AuthController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Service Unavailable'], 500);
         }
     }
-}
 
     /**
      * Get user's virtual accounts in format expected by mobile app
