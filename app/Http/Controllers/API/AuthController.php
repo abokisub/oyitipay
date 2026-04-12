@@ -1349,7 +1349,6 @@ class AuthController extends Controller
     private function getUserVirtualAccounts($username)
     {
         $accounts = [];
-        $settings = DB::table('settings')->first();
         
         // Get all accounts from user_bank table
         $userBanks = DB::table('user_bank')
@@ -1358,23 +1357,33 @@ class AuthController extends Controller
         
         foreach ($userBanks as $bank) {
             $provider = 'unknown';
+            $bankName = $bank->bank;
             
             // Determine provider based on bank name
-            if (stripos($bank->bank, 'TITAN') !== false || stripos($bank->bank, 'PAYSTACK') !== false) {
+            // Check for Titan FIRST before checking for Paystack/Wema
+            if (stripos($bankName, 'TITAN') !== false) {
                 $provider = 'titan';
-            } elseif (stripos($bank->bank, 'WEMA') !== false) {
+                $bankName = 'PAYSTACK-TITAN'; // Ensure consistent naming
+            } elseif (stripos($bankName, 'PAYSTACK') !== false) {
+                $provider = 'paystack';
+                $bankName = 'PAYSTACK-TITAN'; // Paystack = Titan
+            } elseif (stripos($bankName, 'WEMA') !== false) {
                 $provider = 'wema';
-            } elseif (stripos($bank->bank, 'MONIEPOINT') !== false) {
+                $bankName = 'WEMA BANK'; // Ensure consistent naming
+            } elseif (stripos($bankName, 'MONIEPOINT') !== false) {
                 $provider = 'monnify';
-            } elseif (stripos($bank->bank, 'PALMPAY') !== false) {
+                $bankName = 'MONIEPOINT';
+            } elseif (stripos($bankName, 'PALMPAY') !== false) {
                 $provider = 'palmpay';
-            } elseif (stripos($bank->bank, 'KOLOMONI') !== false) {
+                $bankName = 'PALMPAY';
+            } elseif (stripos($bankName, 'KOLOMONI') !== false) {
                 $provider = 'xixapay';
+                $bankName = 'KOLOMONI MFB';
             }
             
             $accounts[] = [
                 'provider' => $provider,
-                'bank_name' => $bank->bank,
+                'bank_name' => $bankName,
                 'account_number' => $bank->account_number,
                 'account_name' => $bank->bank_name ?? null
             ];
@@ -1407,7 +1416,7 @@ class AuthController extends Controller
         if (!empty($user->pointwave_account_number) && !collect($accounts)->where('account_number', $user->pointwave_account_number)->count()) {
             $accounts[] = [
                 'provider' => 'pointwave',
-                'bank_name' => $user->pointwave_bank_name ?? 'PALMPAY BANKS',
+                'bank_name' => 'PALMPAY BANKS',
                 'account_number' => $user->pointwave_account_number,
                 'account_name' => null
             ];
