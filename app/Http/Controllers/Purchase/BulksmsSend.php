@@ -193,7 +193,7 @@ class BulksmsSend extends Controller
             return 'fail';
         }
     }
-    public function Hollatag($data)
+    public static function Hollatag($data)
     {
         if (DB::table('bulksms')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
             $sendRequest = DB::table('bulksms')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
