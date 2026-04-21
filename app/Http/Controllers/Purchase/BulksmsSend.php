@@ -199,33 +199,54 @@ class BulksmsSend extends Controller
             $sendRequest = DB::table('bulksms')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
             $habukhan_api = DB::table('other_api')->first();
 
+            // Convert phone numbers to international format (234xxx) required by Hollatag
+            $numbers = explode(',', $sendRequest->correct_number);
+            $formatted_numbers = [];
+            foreach ($numbers as $number) {
+                $number = trim($number);
+                // Remove any spaces or special characters
+                $number = preg_replace('/[^0-9]/', '', $number);
+                
+                // Convert to international format
+                if (substr($number, 0, 1) == '0') {
+                    // Nigerian local format (0803xxx) -> 234803xxx
+                    $number = '234' . substr($number, 1);
+                } elseif (substr($number, 0, 3) != '234') {
+                    // If not starting with 234, assume it's local without 0
+                    $number = '234' . $number;
+                }
+                $formatted_numbers[] = $number;
+            }
+            $to_numbers = implode(',', $formatted_numbers);
+
             $request = array(
                 "user" => $habukhan_api->hollatag_username,
                 "pass" => $habukhan_api->hollatag_password,
                 "from" => $sendRequest->sender_name,
-                "to" => $sendRequest->correct_number,
+                "to" => $to_numbers,
                 "msg" => $sendRequest->message,
                 "type" => 0,
             );
 
             \Log::info('Hollatag BulkSMS Request', ['data' => $request, 'transid' => $data['transid']]);
 
-            $url = 'https://sms.hollatags.com/api/send/';  //this is the url of the gateway's interface
+            $url = 'https://sms.hollatags.com/api/send/';
 
-            $ch = curl_init(); //initialize curl handle
-            curl_setopt($ch, CURLOPT_URL, $url); //set the url
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($request)); //set the POST variables
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); //return as a variable
-            curl_setopt($ch, CURLOPT_POST, 1); //set POST method
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($request));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_POST, 1);
 
-            $response_sms = curl_exec($ch);      // grab URL and pass it to the browser. Run the whole process and return the response
+            $response_sms = curl_exec($ch);
             $curl_error = curl_error($ch);
-            curl_close($ch); //close the curl handle
+            curl_close($ch);
             
             \Log::info('Hollatag BulkSMS Response', ['response' => $response_sms, 'curl_error' => $curl_error, 'transid' => $data['transid']]);
             
             if (!empty($response_sms)) {
-                if ($response_sms == "sent") {
+                // Check if response contains "sent" or message_id (when enable_msg_id is true)
+                if (strpos($response_sms, 'sent') !== false || strpos($response_sms, '234') !== false) {
                     return 'success';
                 } else {
                     return 'fail';
