@@ -265,14 +265,15 @@ class ExamSend extends Controller
             return 'fail';
         }
     }
-    public function Vtpass($data)
+    public static function Vtpass($data)
     {
         if (DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->count() == 1) {
             $sendRequest = DB::table('exam')->where(['username' => $data['username'], 'transid' => $data['transid']])->first();
             $other_api = DB::table('other_api')->first();
+            $settings = DB::table('settings')->first();
             $paypload = array(
                 'serviceID' => 'waec',
-                'phone' => $this->core()->app_phone,
+                'phone' => $settings->app_phone,
                 'variation_code' => 'waecdirect',
                 'request_id' => Carbon::now('Africa/Lagos')->format('YmdHi') . substr(md5($data['transid']), 0, 8)
             );

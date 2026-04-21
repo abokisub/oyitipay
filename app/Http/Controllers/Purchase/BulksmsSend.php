@@ -237,17 +237,32 @@ class BulksmsSend extends Controller
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($request));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Try without SSL verification
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
             $response_sms = curl_exec($ch);
             $curl_error = curl_error($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
             
-            \Log::info('Hollatag BulkSMS Response', ['response' => $response_sms, 'curl_error' => $curl_error, 'transid' => $data['transid']]);
+            \Log::info('Hollatag BulkSMS Response', [
+                'response' => $response_sms, 
+                'curl_error' => $curl_error, 
+                'http_code' => $http_code,
+                'transid' => $data['transid']
+            ]);
             
             if (!empty($response_sms)) {
                 // Check if response contains "sent" or message_id (when enable_msg_id is true)
                 if (strpos($response_sms, 'sent') !== false || strpos($response_sms, '234') !== false) {
                     return 'success';
+                } elseif (strpos($response_sms, 'error_user') !== false) {
+                    \Log::error('Hollatag: Invalid credentials. Check username/password or look for API Key in dashboard');
+                    return 'fail';
+                } elseif (strpos($response_sms, 'error_balance') !== false) {
+                    \Log::error('Hollatag: Insufficient balance');
+                    return 'fail';
                 } else {
                     return 'fail';
                 }
