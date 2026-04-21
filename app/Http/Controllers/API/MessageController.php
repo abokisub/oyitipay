@@ -213,29 +213,63 @@ class MessageController extends Controller
                     }
                     else {
                     }
+                    
+                    $success_count = 0;
+                    $fail_count = 0;
+                    
                     foreach ($all_user as $user) {
                         $moniepoint_acc = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first()->account_number ?? 'Generating...';
                         $change_habukhan = [$user->username, $user->email, $user->name, $user->phone, $user->webhook, $user->apikey, $user->address, $user->ref, $user->type, $user->paystack_account, $user->palmpay ?? 'N/A', $moniepoint_acc, $user->kolomoni_mfb ?? 'N/A', $user->otp, $user->user_limit, '₦' . number_format($user->bal, 2), '₦' . number_format($user->refbal, 2)];
                         $real_message = str_replace($habukhan_search, $change_habukhan, $request->message);
+                        
+                        // Convert phone to international format
+                        $phone = preg_replace('/[^0-9]/', '', $user->phone);
+                        if (substr($phone, 0, 1) == '0') {
+                            $phone = '234' . substr($phone, 1);
+                        } elseif (substr($phone, 0, 3) != '234') {
+                            $phone = '234' . $phone;
+                        }
+                        
                         $habukhan_api = DB::table('other_api')->first();
                         $r = array(
                             "user" => $habukhan_api->hollatag_username,
                             "pass" => $habukhan_api->hollatag_password,
                             "from" => config('app.name'),
-                            "to" => $user->phone,
+                            "to" => $phone,
                             "msg" => $real_message,
-                            "type" => 0,
+                            "type" => "0",
                         );
 
-                        $url = 'https://sms.hollatags.com/api/send/';
+                        \Log::info('Admin Bulk SMS to ' . $user->username, ['phone' => $phone, 'message' => substr($real_message, 0, 50)]);
+
+                        $url = 'https://sms.hollatags.com/api/send';
                         $ch = curl_init();
                         curl_setopt($ch, CURLOPT_URL, $url);
+                        curl_setopt($ch, CURLOPT_POST, true);
                         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($r));
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                        curl_setopt($ch, CURLOPT_POST, 1);
-                        curl_exec($ch);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                            'Content-Type: application/x-www-form-urlencoded'
+                        ]);
+                        
+                        $response = curl_exec($ch);
                         curl_close($ch);
+                        
+                        if (strpos($response, 'sent') !== false) {
+                            $success_count++;
+                        } else {
+                            $fail_count++;
+                            \Log::error('Admin Bulk SMS failed for ' . $user->username, ['response' => $response]);
+                        }
                     }
+                    
+                    \Log::info('Admin Bulk SMS completed', ['success' => $success_count, 'failed' => $fail_count]);
+                    
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => "Sent to $success_count users, $fail_count failed"
+                    ]);
                 }
                 else {
                     return response()->json([
