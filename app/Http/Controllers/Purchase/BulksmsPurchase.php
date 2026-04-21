@@ -134,7 +134,7 @@ class BulksmsPurchase extends Controller
                                                         $vedning = DB::table('bulksms_sel')->first();
                                                         $choosed = $vedning->bulksms;
                                                         $habukhanvend = new BulksmsSend();
-                                                        $we_chose = array('sender' => $request->sender, 'message' => $request->message, 'number' => $request->number, 'transid' => $transid);
+                                                        $we_chose = array('sender' => $request->sender, 'message' => $request->message, 'number' => $request->number, 'transid' => $transid, 'username' => $user->username);
                                                         $response = $habukhanvend::$choosed($we_chose);
                                                         if ($response == 'success') {
                                                             DB::table('bulksms')->where('transid', $transid)->update(['plan_status' => 1]);
