@@ -219,27 +219,28 @@ class BulksmsSend extends Controller
             }
             $to_numbers = implode(',', $formatted_numbers);
 
-            $request = array(
+            $postData = [
                 "user" => $habukhan_api->hollatag_username,
                 "pass" => $habukhan_api->hollatag_password,
                 "from" => $sendRequest->sender_name,
                 "to" => $to_numbers,
                 "msg" => $sendRequest->message,
-                "type" => 0,
-            );
+                "type" => "0",
+            ];
 
-            \Log::info('Hollatag BulkSMS Request', ['data' => $request, 'transid' => $data['transid']]);
+            \Log::info('Hollatag BulkSMS Request', ['data' => $postData, 'transid' => $data['transid']]);
 
-            $url = 'https://sms.hollatags.com/api/send/';
+            $url = 'https://sms.hollatags.com/api/send';
 
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($request));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Try without SSL verification
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/x-www-form-urlencoded'
+            ]);
 
             $response_sms = curl_exec($ch);
             $curl_error = curl_error($ch);
@@ -254,16 +255,16 @@ class BulksmsSend extends Controller
             ]);
             
             if (!empty($response_sms)) {
-                // Check if response contains "sent" or message_id (when enable_msg_id is true)
-                if (strpos($response_sms, 'sent') !== false || strpos($response_sms, '234') !== false) {
+                if (strpos($response_sms, 'sent') !== false) {
                     return 'success';
                 } elseif (strpos($response_sms, 'error_user') !== false) {
-                    \Log::error('Hollatag: Invalid credentials. Check username/password or look for API Key in dashboard');
+                    \Log::error('Hollatag: error_user - Account may be suspended or IP blocked');
                     return 'fail';
                 } elseif (strpos($response_sms, 'error_balance') !== false) {
                     \Log::error('Hollatag: Insufficient balance');
                     return 'fail';
                 } else {
+                    \Log::error('Hollatag: Unknown error - ' . $response_sms);
                     return 'fail';
                 }
             } else {
