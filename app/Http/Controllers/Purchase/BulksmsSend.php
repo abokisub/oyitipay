@@ -208,6 +208,8 @@ class BulksmsSend extends Controller
                 "type" => 0,
             );
 
+            \Log::info('Hollatag BulkSMS Request', ['data' => $request, 'transid' => $data['transid']]);
+
             $url = 'https://sms.hollatags.com/api/send/';  //this is the url of the gateway's interface
 
             $ch = curl_init(); //initialize curl handle
@@ -217,7 +219,11 @@ class BulksmsSend extends Controller
             curl_setopt($ch, CURLOPT_POST, 1); //set POST method
 
             $response_sms = curl_exec($ch);      // grab URL and pass it to the browser. Run the whole process and return the response
+            $curl_error = curl_error($ch);
             curl_close($ch); //close the curl handle
+            
+            \Log::info('Hollatag BulkSMS Response', ['response' => $response_sms, 'curl_error' => $curl_error, 'transid' => $data['transid']]);
+            
             if (!empty($response_sms)) {
                 if ($response_sms == "sent") {
                     return 'success';
@@ -225,9 +231,10 @@ class BulksmsSend extends Controller
                     return 'fail';
                 }
             } else {
-                return 'proccess';
+                return 'process';
             }
         } else {
+            \Log::error('Hollatag BulkSMS: Record not found', ['username' => $data['username'], 'transid' => $data['transid']]);
             return 'fail';
         }
     }
