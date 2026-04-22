@@ -390,13 +390,35 @@ class AirtimeCash extends Controller
         $response = $this->autopilot_request('/v1/send-airtime/auto-airtime-to-cash', $payload);
 
         if (isset($response['status']) && $response['status'] == true) {
+            // Check for complete failure despite status == true
+            $data = $response['data'] ?? [];
+            if (isset($data['info']) && $data['info']['success'] == 0 && $data['info']['failed'] > 0) {
+                $msg = $data['details'][0]['message'] ?? $data['message'] ?? 'Airtime conversion failed';
+                
+                // Map provider errors to user-friendly messages
+                if (str_contains(strtolower($msg), 'pin') || str_contains(strtolower($msg), 'unauthorized') || str_contains(strtolower($msg), 'authentication failed')) {
+                    $msg = 'Incorrect Share & Sell PIN. Please check and try again.';
+                } elseif (str_contains(strtolower($msg), 'insufficient')) {
+                    $msg = 'Insufficient airtime balance on the provided number.';
+                }
+
+                // Update database to failed (plan_status = 2)
+                DB::table('cash')->where('transid', $request->transid)->update(['plan_status' => 2]);
+                DB::table('message')->where('transid', $request->transid)->update(['plan_status' => 2, 'message' => "Airtime 2 Cash Failed: " . $msg]);
+
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => $msg
+                ], 400);
+            }
+
             return response()->json([
                 'status' => 'success',
                 'message' => $response['data']['message'] ?? 'Airtime conversion initiated successfully'
             ]);
         }
 
-        // Extensive Logging for debugging "Random Errors"\n
+        // Extensive Logging for debugging "Random Errors"
         $msg = $response['data']['message'] ?? $response['message'] ?? 'Airtime conversion failed';
 
         // Map provider errors to user-friendly messages
@@ -405,6 +427,10 @@ class AirtimeCash extends Controller
         } elseif (str_contains(strtolower($msg), 'insufficient')) {
             $msg = 'Insufficient airtime balance on the provided number.';
         }
+
+        // Update database to failed for standard failure response
+        DB::table('cash')->where('transid', $request->transid)->update(['plan_status' => 2]);
+        DB::table('message')->where('transid', $request->transid)->update(['plan_status' => 2, 'message' => "Airtime 2 Cash Failed: " . $msg]);
 
         return response()->json([
             'status' => 'fail',

@@ -185,7 +185,141 @@ class WebhookController extends Controller
 
     public function AutopilotWebhook(Request $request)
     {
-    // ... (existing code)
+        $payload = $request->all();
+        \Log::info('Autopilot Webhook received:', $payload);
+
+        // Check if payload has the expected structure
+        if (isset($payload['status']) && isset($payload['data']['yourReference'])) {
+            $reference = $payload['data']['yourReference'];
+            $status = $payload['status'] == true ? 'success' : 'fail';
+
+            $tables = ['data', 'airtime', 'cable', 'cash'];
+            foreach ($tables as $table) {
+                // Autopilot transactions store the generated reference in `api_reference`
+                $transaction = DB::table($table)->where('api_reference', $reference)->first();
+                if ($transaction) {
+                    // Check idempotency
+                    if ($transaction->plan_status == 1 || $transaction->plan_status == 2) {
+                        return response()->json(['status' => 'success', 'message' => 'Already processed']);
+                    }
+
+                    if ($status == 'success') {
+                        DB::table($table)->where('api_reference', $reference)->update(['plan_status' => 1]);
+                        DB::table('message')->where('transid', $transaction->transid)->update(['plan_status' => 1]);
+
+                        // Specific logic for Airtime to Cash (Auto-crediting)
+                        if ($table == 'cash') {
+                            $user = DB::table('user')->where('username', $transaction->username)->first();
+                            if ($user) {
+                                // If payment type is wallet, credit the user
+                                if (strtolower($transaction->payment_type) == 'wallet') {
+                                    DB::table('user')->where('username', $user->username)->increment('bal', $transaction->amount_credit);
+                                    
+                                    // Update history messages with new balance
+                                    $newBal = $user->bal + $transaction->amount_credit;
+                                    DB::table('message')->where('transid', $transaction->transid)->update([
+                                        'message' => 'Airtime 2 Cash Success (Auto)',
+                                        'oldbal' => $user->bal,
+                                        'newbal' => $newBal
+                                    ]);
+                                    DB::table('cash')->where('transid', $transaction->transid)->update([
+                                        'oldbal' => $user->bal,
+                                        'newbal' => $newBal
+                                    ]);
+
+                                    // Push notification
+                                    try {
+                                        (new \App\Services\FirebaseService())->sendNotification(
+                                            $user->app_token,
+                                            "Airtime to Cash Approved",
+                                            "Your airtime conversion was successful. ₦" . number_format($transaction->amount_credit, 2) . " credited to your wallet.",
+                                            ['type' => 'transaction', 'action' => 'airtime_cash']
+                                        );
+                                    } catch (\Exception $e) {
+                                        \Log::warning('AirtimeCash Push failed: ' . $e->getMessage());
+                                    }
+                                } else {
+                                    DB::table('message')->where('transid', $transaction->transid)->update(['message' => 'Airtime 2 Cash Success (Auto Bank/Other)']);
+                                }
+                            }
+                        } else {
+                            // Send push notification for Data/Airtime success if needed
+                            $user = DB::table('user')->where('username', $transaction->username)->first();
+                            if ($user) {
+                                (new \App\Services\NotificationService())->sendServicePurchaseNotification($user, ucfirst($table) . ' Purchase', $transaction->amount, 'success', $transaction->transid);
+                            }
+                        }
+
+                    } elseif ($status == 'fail') {
+                        DB::table($table)->where('api_reference', $reference)->update(['plan_status' => 2]);
+                        DB::table('message')->where('transid', $transaction->transid)->update(['plan_status' => 2]);
+
+                        // Handle Refunds for Purchases (Data, Airtime, Cable)
+                        if ($table != 'cash') {
+                            $user = DB::table('user')->where('username', $transaction->username)->first();
+                            if ($user) {
+                                $refund_amount = $transaction->amount ?? 0;
+                                if ($table == 'airtime') $refund_amount = $transaction->discount ?? $transaction->amount;
+                                elseif ($table == 'cable') $refund_amount = $transaction->amount + ($transaction->charges ?? 0);
+
+                                if (strtolower($transaction->wallet ?? 'wallet') == 'wallet') {
+                                    DB::table('user')->where('username', $user->username)->increment('bal', $refund_amount);
+                                    $newBal = $user->bal + $refund_amount;
+                                } else {
+                                    $wallet_bal = strtolower($transaction->wallet) . "_bal";
+                                    DB::table('wallet_funding')->where('username', $user->username)->increment($wallet_bal, $refund_amount);
+                                    $newBal = DB::table('wallet_funding')->where('username', $user->username)->value($wallet_bal);
+                                }
+
+                                DB::table('message')->where('transid', $transaction->transid)->update([
+                                    'message' => "Transaction Failed (Refund) - Webhook",
+                                    'oldbal' => $user->bal,
+                                    'newbal' => $newBal
+                                ]);
+                                
+                                (new \App\Services\NotificationService())->sendServicePurchaseNotification($user, ucfirst($table) . ' Purchase', $transaction->amount, 'failed', $transaction->transid);
+                            }
+                        } else {
+                            // If Airtime to Cash failed
+                            DB::table('message')->where('transid', $transaction->transid)->update(['message' => 'Airtime 2 Cash Failed (Auto)']);
+                            $user = DB::table('user')->where('username', $transaction->username)->first();
+                            if ($user && $user->app_token) {
+                                try {
+                                    (new \App\Services\FirebaseService())->sendNotification(
+                                        $user->app_token,
+                                        "Airtime to Cash Declined",
+                                        "Your airtime conversion request has failed.",
+                                        ['type' => 'transaction', 'action' => 'airtime_cash']
+                                    );
+                                } catch (\Exception $e) {
+                                    \Log::warning('AirtimeCash Push failed: ' . $e->getMessage());
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Trigger user's own webhook if they have one configured
+                    $user = DB::table('user')->where('username', $transaction->username)->first();
+                    if ($user && !empty($user->webhook)) {
+                        @$ch = curl_init();
+                        curl_setopt($ch, CURLOPT_URL, $user->webhook);
+                        curl_setopt($ch, CURLOPT_POST, 1);
+                        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+                            'status' => $status, 
+                            'request-id' => $transaction->transid, 
+                            'response' => $payload['data']['message'] ?? 'Webhook Update'
+                        ]));
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_exec($ch);
+                        curl_close($ch);
+                    }
+
+                    return response()->json(['status' => 'success'], 200);
+                }
+            }
+        }
+
+        return response()->json(['status' => 'ignored'], 200);
     }
 
     /**
