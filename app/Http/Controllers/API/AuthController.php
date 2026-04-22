@@ -1429,6 +1429,37 @@ class AuthController extends Controller
                 'account_name' => null
             ];
         }
+
+        // Add Wema if exists and not already in list
+        if (!empty($user->wema) && !collect($accounts)->where('account_number', $user->wema)->count()) {
+            $accounts[] = [
+                'provider' => 'wema',
+                'bank_name' => 'WEMA BANK',
+                'account_number' => $user->wema,
+                'account_name' => null
+            ];
+        }
+
+        // Add Paystack (Titan) if exists and not already in list
+        if (!empty($user->paystack_account) && !collect($accounts)->where('account_number', $user->paystack_account)->count()) {
+            $accounts[] = [
+                'provider' => 'titan',
+                'bank_name' => $user->paystack_bank ?? 'PAYSTACK-TITAN',
+                'account_number' => $user->paystack_account,
+                'account_name' => null
+            ];
+        }
+
+        // Add Moniepoint if it exists in user table (if ever saved there) or simply fallback
+        // The user_bank query usually catches this, but for robustness:
+        if (!empty($user->sterlen) && !collect($accounts)->where('account_number', $user->sterlen)->count()) {
+            $accounts[] = [
+                'provider' => 'monnify',
+                'bank_name' => 'MONIEPOINT',
+                'account_number' => $user->sterlen,
+                'account_name' => null
+            ];
+        }
         
         return $accounts;
     }
