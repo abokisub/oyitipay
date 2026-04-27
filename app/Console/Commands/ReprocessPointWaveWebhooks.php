@@ -59,6 +59,7 @@ class ReprocessPointWaveWebhooks extends Command
                 $this->info('Successfully processed event ID: ' . $event->event_id);
             } catch (\Exception $e) {
                 $this->error('Error processing event ID ' . $event->event_id . ': ' . $e->getMessage());
+                $this->error('PAYLOAD DUMP: ' . $event->payload);
             }
         }
 
