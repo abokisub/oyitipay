@@ -747,6 +747,7 @@ class Controller extends BaseController
                         'account_number' => $accountNumber,
                         'bank_name' => $accountName,
                         'bank' => strtoupper($bankName),
+                        'bank_code' => $bankSlug,
                         'date' => now()->toDateTimeString()
                     ]
                 );

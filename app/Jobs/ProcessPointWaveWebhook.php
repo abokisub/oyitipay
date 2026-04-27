@@ -144,6 +144,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
         }
 
         if (!$accountNumber) {
+            \Log::error('PointWave Webhook: Missing account_number in payload', ['payload' => $transactionData]);
             throw new \Exception('Account number not found in webhook data');
         }
 
@@ -154,7 +155,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
 
         if (!$virtualAccount) {
             // Fallback: Check user table directly (for accounts created before bank_code fix)
-            Log::info('Virtual account not in pointwave_virtual_accounts table, checking user table', [
+            Log::info('PointWave Webhook: Virtual account not in pointwave_virtual_accounts table, checking user table', [
                 'account_number' => $accountNumber
             ]);
             
@@ -163,6 +164,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 ->first();
                 
             if (!$userRecord) {
+                \Log::error('PointWave Webhook: User record not found for account_number: ' . $accountNumber);
                 throw new \Exception('Virtual account not found for account_number: ' . $accountNumber);
             }
             
@@ -170,6 +172,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
             $user = \App\Models\User::find($userRecord->id);
             
             if (!$user) {
+                \Log::error('PointWave Webhook: User instance could not be resolved', ['user_id' => $userRecord->id]);
                 throw new \Exception('User model not found for user_id: ' . $userRecord->id);
             }
             
@@ -179,7 +182,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
                        ?? $transactionData['customer_id']
                        ?? null;
             
-            Log::info('Found user via fallback lookup', [
+            Log::info('PointWave Webhook: Found user via fallback lookup', [
                 'user_id' => $user->id,
                 'username' => $user->username,
                 'customer_id' => $customerId
@@ -187,9 +190,14 @@ class ProcessPointWaveWebhook implements ShouldQueue
         } else {
             $user = $virtualAccount->user;
             $customerId = $virtualAccount->customer_id;
+            Log::info('PointWave Webhook: Found virtual account', [
+                'user_id' => $user->id,
+                'account_number' => $accountNumber
+            ]);
         }
 
         if (!$user) {
+            \Log::error('PointWave Webhook: User not found for virtual account', ['account' => $accountNumber]);
             throw new \Exception('User not found for virtual account');
         }
 
@@ -204,12 +212,10 @@ class ProcessPointWaveWebhook implements ShouldQueue
             
             if ($chargeValue == 0) {
                 // MARKETING STRATEGY: FREE DEPOSITS
-                // When admin sets 0.0%, customer gets full deposit amount
-                // Business absorbs PointWave fees as marketing cost
                 $finalAmount = $amount; // Customer gets full ₦100
                 $kobopointFee = 0; // No fee charged to customer
                 
-                Log::info('Free deposit strategy applied', [
+                Log::info('PointWave Webhook: Free deposit strategy applied', [
                     'customer_deposit' => $amount,
                     'customer_credited' => $finalAmount,
                     'pointwave_fee_absorbed' => $fee,
@@ -234,7 +240,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 // Customer pays platform fee, gets net amount
                 $finalAmount = $amount - $kobopointFee;
                 
-                Log::info('Platform fee applied', [
+                Log::info('PointWave Webhook: Platform fee applied', [
                     'customer_deposit' => $amount,
                     'platform_fee' => $kobopointFee,
                     'customer_credited' => $finalAmount,
@@ -258,7 +264,6 @@ class ProcessPointWaveWebhook implements ShouldQueue
             $user->increment('bal', $finalAmount);
 
             // Create transaction record in pointwave_transactions table
-            // Note: fee field shows what customer was charged (0 for free deposits)
             PointWaveTransaction::create([
                 'user_id' => $user->id,
                 'type' => 'deposit',
@@ -268,6 +273,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 'reference' => $reference,
                 'pointwave_transaction_id' => $transactionId,
                 'pointwave_customer_id' => $customerId,
+                'account_number' => $accountNumber,
                 'description' => 'Deposit via PointWave',
                 'metadata' => json_encode(array_merge($transactionData, [
                     'business_absorbed_fee' => $settings && floatval($settings->pointwave_charge_value ?? 0) == 0 ? $fee : 0
@@ -275,12 +281,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
             ]);
 
             // Create message for transaction history
-            $feeMessage = '';
-            if ($kobopointFee > 0) {
-                $feeMessage = sprintf(' (Fee: ₦%.2f)', $kobopointFee);
-            } else {
-                $feeMessage = ' (Free Deposit)';
-            }
+            $feeMessage = $kobopointFee > 0 ? sprintf(' (Fee: ₦%.2f)', $kobopointFee) : ' (Free Deposit)';
 
             // Also create transaction in message table for transaction history
             DB::table('message')->insert([
@@ -324,21 +325,21 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 }
             }
 
-            Log::info('PointWave deposit processed', [
+            Log::info('PointWave deposit processed successfully', [
                 'user_id' => $user->id,
                 'customer_deposit' => $amount,
-                'pointwave_fee' => $fee,
-                'platform_fee_charged' => $kobopointFee,
                 'customer_credited' => $finalAmount,
                 'transaction_id' => $transactionId,
-                'new_balance' => $user->bal,
-                'admin_charge_setting' => $settings->pointwave_charge_value ?? 0,
-                'free_deposit_strategy' => ($settings && floatval($settings->pointwave_charge_value ?? 0) == 0),
-                'business_absorbed_cost' => ($settings && floatval($settings->pointwave_charge_value ?? 0) == 0) ? $fee : 0
+                'new_balance' => $user->bal
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('PointWave Webhook: Failed to save transaction to database', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id,
+                'transaction_id' => $transactionId
+            ]);
             throw $e;
         }
     }
