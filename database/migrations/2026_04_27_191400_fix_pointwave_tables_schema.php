@@ -14,37 +14,37 @@ return new class extends Migration
     {
         // 1. Fix pointwave_kyc table
         if (Schema::hasTable('pointwave_kyc')) {
-            Schema::table('pointwave_kyc', function (Blueprint $table) {
-                // Rename status to kyc_status if status exists and kyc_status does not
-                if (Schema::hasColumn('pointwave_kyc', 'status') && !Schema::hasColumn('pointwave_kyc', 'kyc_status')) {
-                    $table->renameColumn('status', 'kyc_status');
+            // Check if 'status' column exists and needs renaming to 'kyc_status'
+            // Using raw SQL to avoid Doctrine dependency in Laravel 8
+            if (Schema::hasColumn('pointwave_kyc', 'status') && !Schema::hasColumn('pointwave_kyc', 'kyc_status')) {
+                try {
+                    DB::statement("ALTER TABLE pointwave_kyc CHANGE COLUMN status kyc_status ENUM('not_submitted', 'pending', 'verified', 'rejected') DEFAULT 'not_submitted'");
+                } catch (\Exception $e) {
+                    \Log::error("Migration Error: Could not rename status to kyc_status: " . $e->getMessage());
                 }
-                
-                // Add transaction_limit if missing
+            } else if (Schema::hasColumn('pointwave_kyc', 'kyc_status')) {
+                // Just ensure the enum values are correct if it already exists
+                try {
+                    DB::statement("ALTER TABLE pointwave_kyc MODIFY COLUMN kyc_status ENUM('not_submitted', 'pending', 'verified', 'rejected') DEFAULT 'not_submitted'");
+                } catch (\Exception $e) {
+                    \Log::warning("Migration Warning: Could not modify kyc_status enum: " . $e->getMessage());
+                }
+            }
+            
+            // Add other columns if missing
+            Schema::table('pointwave_kyc', function (Blueprint $table) {
                 if (!Schema::hasColumn('pointwave_kyc', 'transaction_limit')) {
                     $table->decimal('transaction_limit', 15, 2)->default(50000.00)->after('daily_limit');
                 }
                 
-                // Add bvn if missing
                 if (!Schema::hasColumn('pointwave_kyc', 'bvn')) {
                     $table->string('bvn')->nullable()->after('user_id');
                 }
                 
-                // Add nin if missing
                 if (!Schema::hasColumn('pointwave_kyc', 'nin')) {
                     $table->string('nin')->nullable()->after('bvn');
                 }
-                
-                // Ensure kyc_status is an enum with correct values if it was renamed or already exists
-                // Note: We use DB statement for enum modifications as Blueprint change() can be tricky with enums
             });
-            
-            // Fix enum values for kyc_status
-            try {
-                DB::statement("ALTER TABLE pointwave_kyc MODIFY COLUMN kyc_status ENUM('not_submitted', 'pending', 'verified', 'rejected') DEFAULT 'not_submitted'");
-            } catch (\Exception $e) {
-                \Log::warning("Could not modify kyc_status enum: " . $e->getMessage());
-            }
         }
 
         // 2. Fix pointwave_transactions table
@@ -76,15 +76,15 @@ return new class extends Migration
                 }
             });
             
-            // Fix enum values for status and type
+            // Fix enum values for status and type using raw SQL
             try {
-                // Combine status enums from both versions: successful (v1) and completed (v2)
+                // Combine status enums
                 DB::statement("ALTER TABLE pointwave_transactions MODIFY COLUMN status ENUM('pending', 'successful', 'completed', 'failed', 'refunded') DEFAULT 'pending'");
                 
-                // Combine type enums: deposit, transfer, withdrawal (v1) and deposit, transfer, fee (v2)
+                // Combine type enums
                 DB::statement("ALTER TABLE pointwave_transactions MODIFY COLUMN type ENUM('deposit', 'transfer', 'withdrawal', 'fee')");
             } catch (\Exception $e) {
-                \Log::warning("Could not modify pointwave_transactions enums: " . $e->getMessage());
+                \Log::warning("Migration Warning: Could not modify pointwave_transactions enums: " . $e->getMessage());
             }
         }
     }
@@ -94,6 +94,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // No down migration needed for schema fixes of this nature
+        // No down migration needed
     }
 };
