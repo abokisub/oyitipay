@@ -1754,15 +1754,19 @@ class DataSend extends Controller
         // 1. Try Primary Vendor
         if (method_exists(self::class, $primary_method)) {
             $response = self::$primary_method($data);
+            \Log::info("SmartSwitch: Primary method $primary_method returned $response", ['transid' => $data['transid']]);
         } else {
-            \Log::error("SmartSwitch: Method $primary_method does not exist.");
+            \Log::error("SmartSwitch: Method $primary_method does not exist.", ['transid' => $data['transid']]);
             $response = 'fail';
         }
 
         // 2. If Failed, Trigger Failover
         if ($response == 'fail') {
+            \Log::warning("SmartSwitch: Primary $primary_method failed, triggering RetryLogic", ['transid' => $data['transid']]);
             // Exclude primary from retry list
-            return self::RetryLogic($data, [$primary_method]);
+            $retry_response = self::RetryLogic($data, [$primary_method]);
+            \Log::info("SmartSwitch: RetryLogic final response: $retry_response", ['transid' => $data['transid']]);
+            return $retry_response;
         }
 
         return $response;
@@ -1787,6 +1791,18 @@ class DataSend extends Controller
             'vtpass' => 'Vtpass',
             'habukhan1' => 'Habukhan1',
             'habukhan2' => 'Habukhan2',
+            'habukhan3' => 'Habukhan3',
+            'habukhan4' => 'Habukhan4',
+            'habukhan5' => 'Habukhan5',
+            'adex1' => 'Adex1',
+            'adex2' => 'Adex2',
+            'adex3' => 'Adex3',
+            'adex4' => 'Adex4',
+            'adex5' => 'Adex5',
+            'msorg1' => 'Msorg1',
+            'msorg2' => 'Msorg2',
+            'msorg3' => 'Msorg3',
+            'msorg4' => 'Msorg4',
             'autopilot' => 'Autopilot'
         ];
 
@@ -1801,10 +1817,12 @@ class DataSend extends Controller
             if (!empty($dataplan->$column)) {
 
                 // Try this vendor
+                \Log::info("SmartSwitch: Attempting failover to $method", ['transid' => $data['transid']]);
                 if (method_exists(self::class, $method)) {
                     $response = self::$method($data);
+                    \Log::info("SmartSwitch: Failover method $method returned $response", ['transid' => $data['transid']]);
                 } else {
-                    \Log::error("SmartSwitch: Method $method does not exist.");
+                    \Log::error("SmartSwitch: Method $method does not exist.", ['transid' => $data['transid']]);
                     $response = 'fail';
                 }
 
@@ -1818,6 +1836,7 @@ class DataSend extends Controller
         }
 
         // 4. If all fail
+        \Log::error("SmartSwitch: ALL failover methods exhausted. Transaction completely failed.", ['transid' => $data['transid']]);
         return 'fail';
     }
 }
