@@ -154,7 +154,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
         $user = null;
 
         if (!$virtualAccount) {
-            // Fallback: Check user table directly (for accounts created before bank_code fix)
+            // Fallback 1: Check user table directly for account number
             Log::info('PointWave Webhook: Virtual account not in pointwave_virtual_accounts table, checking user table', [
                 'account_number' => $accountNumber
             ]);
@@ -163,8 +163,26 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 ->where('pointwave_account_number', $accountNumber)
                 ->first();
                 
+            // Fallback 2: Check by customer_id if available
             if (!$userRecord) {
-                \Log::error('PointWave Webhook: User record not found for account_number: ' . $accountNumber);
+                $webhookCustomerId = $transactionData['customer']['customer_id'] ?? $transactionData['customer_id'] ?? null;
+                if ($webhookCustomerId) {
+                    Log::info('PointWave Webhook: Attempting lookup by customer_id', ['customer_id' => $webhookCustomerId]);
+                    $userRecord = \DB::table('user')->where('pointwave_customer_id', $webhookCustomerId)->first();
+                }
+            }
+            
+            // Fallback 3: Check by email if available
+            if (!$userRecord) {
+                $webhookEmail = $transactionData['customer']['email'] ?? $transactionData['email'] ?? null;
+                if ($webhookEmail) {
+                    Log::info('PointWave Webhook: Attempting lookup by email', ['email' => $webhookEmail]);
+                    $userRecord = \DB::table('user')->where('email', $webhookEmail)->first();
+                }
+            }
+                
+            if (!$userRecord) {
+                \Log::error('PointWave Webhook: User record not found for account_number: ' . $accountNumber . ' and all fallbacks failed.');
                 throw new \Exception('Virtual account not found for account_number: ' . $accountNumber);
             }
             
@@ -178,8 +196,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
             
             // Get customer_id from user record or webhook data
             $customerId = $user->pointwave_customer_id 
-                       ?? $transactionData['customer']['customer_id'] 
-                       ?? $transactionData['customer_id']
+                       ?? $webhookCustomerId
                        ?? null;
             
             Log::info('PointWave Webhook: Found user via fallback lookup', [
