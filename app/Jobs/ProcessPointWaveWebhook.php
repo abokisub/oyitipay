@@ -183,6 +183,7 @@ class ProcessPointWaveWebhook implements ShouldQueue
                 
             if (!$userRecord) {
                 \Log::error('PointWave Webhook: User record not found for account_number: ' . $accountNumber . ' and all fallbacks failed.');
+                \Log::error('PointWave Webhook FULL PAYLOAD DUMP: ' . json_encode($this->data));
                 throw new \Exception('Virtual account not found for account_number: ' . $accountNumber);
             }
             
