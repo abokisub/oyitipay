@@ -458,7 +458,9 @@ class WebhookController extends Controller
                         'newbal' => $newBalance,
                         'transid' => $reference,
                         'habukhan_date' => now()->toDateTimeString(),
-                        'plan_status' => 1
+                        'plan_status' => 1,
+                        'phone_account' => 'Paystack Funding',
+                        'role' => 'credit'
                     ]);
 
                     // Send Notification
