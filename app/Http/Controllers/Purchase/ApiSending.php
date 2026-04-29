@@ -199,19 +199,34 @@ class ApiSending extends Controller
 
     public static function BoltNetApi($endpoint, $data)
     {
+        \Log::info('🚨 BoltNet API Request:', ['url' => $endpoint['endpoint'] ?? 'N/A', 'payload' => $data]);
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $endpoint['endpoint']);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         $headers = [
-            "Authorization: Token " . $endpoint['token'],
+            "Authorization: Token " . ($endpoint['token'] ?? ''),
             'Content-Type: application/json'
         ];
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         $dataapi = curl_exec($ch);
+        $err = curl_error($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        return json_decode($dataapi, true);
+
+        if ($err) {
+            \Log::error('🚨 BoltNet API cURL Error:', ['error' => $err]);
+            return ['status' => 'fail', 'message' => 'Connection Error'];
+        }
+
+        $decoded = json_decode($dataapi, true);
+        \Log::info('🚨 BoltNet API Response:', ['http_code' => $httpcode, 'response' => $decoded]);
+        
+        return $decoded;
     }
 
     public static function VIRUSAPI($endpoint, $data)

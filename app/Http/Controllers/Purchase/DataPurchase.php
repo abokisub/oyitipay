@@ -16,11 +16,18 @@ class DataPurchase extends Controller
 
     public function BuyData(Request $request)
     {
+        \Log::info('🚨 DATA PURCHASE DEBUG - Request reached BuyData method', [
+            'method' => $request->method(),
+            'url' => $request->url(),
+            'payload' => $request->all()
+        ]);
+
         // check where the response coming from
         $explode_url = explode(',', config('app.habukhan_app_key'));
 
         // Prioritize device key authentication for mobile apps
         if (config('app.habukhan_device_key') == $request->header('Authorization')) {
+            \Log::info('🚨 DATA PURCHASE DEBUG - Auth Branch: APP DEVICE KEY MATCHED');
 
             $validator = Validator::make($request->all(), [
                 'network' => 'required',
@@ -47,10 +54,13 @@ class DataPurchase extends Controller
                 // Verify PIN for mobile app
                 if (trim($d_token->pin) == trim($request->pin)) {
                     $accessToken = $d_token->apikey;
+                    \Log::info("✅ PIN Verified for User ID: {$verified_user_id}");
                 }
                 else {
-                    \Log::error('DataPurchase - PIN validation failed', [
-                        'pin_match' => ($d_token->pin == $request->pin),
+                    \Log::error('🚨 DATA PURCHASE DEBUG - PIN validation failed', [
+                        'user_id' => $verified_user_id,
+                        'sent_pin' => $request->pin,
+                        'stored_pin' => $d_token->pin
                     ]);
                     return response()->json([
                         'status' => 'fail',
@@ -59,7 +69,7 @@ class DataPurchase extends Controller
                 }
             }
             else {
-                \Log::error('DataPurchase - User not found', ['verified_user_id' => $verified_user_id]);
+                \Log::error('🚨 DATA PURCHASE DEBUG - User not found', ['verified_user_id' => $verified_user_id]);
                 $accessToken = 'null';
             }
         }
@@ -246,6 +256,13 @@ class DataPurchase extends Controller
                                         $wallet_bal = null;
                                         $vending = null;
                                     }
+
+                                    \Log::info("🚨 DATA PURCHASE DEBUG - Selection:", [
+                                        'network' => $network_d->network,
+                                        'plan_type' => $plan_d->plan_type,
+                                        'vending_col' => $vending,
+                                        'wallet_bal_col' => $wallet_bal
+                                    ]);
                                     if (!empty($habukhan_lock)) {
                                         if ($network_d->$habukhan_lock == 1) {
                                             if (substr($phone, 0, 1) == 0) {
