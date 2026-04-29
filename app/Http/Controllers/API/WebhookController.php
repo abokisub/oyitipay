@@ -390,11 +390,20 @@ class WebhookController extends Controller
                     return response()->json(['status' => 'error', 'message' => 'Missing fields'], 400);
                 }
 
-                // 5. Find User
+                // 5. Find User (Check main table, then fallback to user_bank)
+                $accountNumber = trim($accountNumber);
                 $user = DB::table('user')->where('paystack_account', $accountNumber)->first();
 
                 if (!$user) {
-                    \Log::warning("💰 Paystack DVA: User not found for account $accountNumber");
+                    \Log::info("💰 Paystack DVA: Account $accountNumber not in user table, checking user_bank...");
+                    $userBank = DB::table('user_bank')->where('account_number', $accountNumber)->first();
+                    if ($userBank && !empty($userBank->username)) {
+                        $user = DB::table('user')->where('username', $userBank->username)->first();
+                    }
+                }
+
+                if (!$user) {
+                    \Log::warning("💰 Paystack DVA: User not found for account $accountNumber in any table");
                     return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
                 }
 
