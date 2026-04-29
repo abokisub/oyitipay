@@ -440,9 +440,7 @@ class WebhookController extends Controller
                         'status' => 1,
                         'transid' => $reference,
                         'charges' => $paystackCharge,
-                        'monify_ref' => $reference,
-                        'created_at' => now(),
-                        'updated_at' => now()
+                        'monify_ref' => $reference
                     ]);
 
                     // Record History
@@ -459,9 +457,8 @@ class WebhookController extends Controller
                         'oldbal' => $oldBalance,
                         'newbal' => $newBalance,
                         'transid' => $reference,
-                        'date' => now(),
-                        'plan_status' => 1,
-                        'mes' => "Your wallet has been credited with ₦" . number_format($netAmount, 2) . " via Paystack."
+                        'habukhan_date' => now()->toDateTimeString(),
+                        'plan_status' => 1
                     ]);
 
                     // Send Notification
