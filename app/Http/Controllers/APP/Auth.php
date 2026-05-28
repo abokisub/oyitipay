@@ -3718,6 +3718,7 @@ class Auth extends Controller
 
     public function updateKyc(Request $request)
     {
+        \Log::info("Mobile App KYC Request", $request->all());
         $authHeader = $request->header('Authorization');
         if (strpos($authHeader, 'Token ') === 0) {
             $authHeader = substr($authHeader, 6);
