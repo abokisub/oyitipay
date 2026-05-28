@@ -2802,6 +2802,62 @@ class AdminController extends Controller
             return redirect(config('app.error_500'));
         }
     }
+
+    public function KycSel(Request $request)
+    {
+        $explode_url = explode(',', config('app.habukhan_app_key'));
+        if (!$request->headers->get('origin') || in_array($request->headers->get('origin'), $explode_url)) {
+            if (!empty($request->id)) {
+                $check_user = DB::table('user')->where(['status' => 1, 'id' => $this->verifytoken($request->id)])->where(function ($query) {
+                    $query->where('type', 'ADMIN');
+                });
+                if ($check_user->count() == 1) {
+                    $main_validator = validator::make($request->all(), [
+                        'kyc' => 'required'
+                    ]);
+                    if ($main_validator->fails()) {
+                        return response()->json([
+                            'message' => $main_validator->errors()->first(),
+                            'status' => 403
+                        ])->setStatusCode(403);
+                    }
+                    else {
+                        $data = [
+                            'kyc' => $request->kyc,
+                        ];
+                        // If the table is empty, insert instead of update
+                        if (DB::table('kyc_sel')->count() == 0) {
+                            $data['created_at'] = now();
+                            $data['updated_at'] = now();
+                            DB::table('kyc_sel')->insert($data);
+                        } else {
+                            $data['updated_at'] = now();
+                            DB::table('kyc_sel')->update($data);
+                        }
+                        return response()->json([
+                            'status' => 'success',
+                            'message' => 'Updated Success'
+                        ]);
+                    }
+                }
+                else {
+                    return response()->json([
+                        'status' => 403,
+                        'message' => 'Not Authorised'
+                    ])->setStatusCode(403);
+                }
+            }
+            else {
+                return response()->json([
+                    'status' => 403,
+                    'message' => 'Unable to Authenticate System'
+                ])->setStatusCode(403);
+            }
+        }
+        else {
+            return redirect(config('app.error_500'));
+        }
+    }
     public function AllUsersInfo(Request $request)
     {
         $explode_url = explode(',', config('app.habukhan_app_key'));

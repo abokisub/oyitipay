@@ -225,6 +225,7 @@ Route::post('edit/cablesel/account/{id}/habukhan/secure', [AdminController::clas
 Route::post('edit/billsel/account/{id}/habukhan/secure', [AdminController::class , 'BillSel']);
 Route::post('edit/bulksmssel/account/{id}/habukhan/secure', [AdminController::class , 'BulkSMSsel']);
 Route::post('edit/bank-transfer/sel/account/{id}/habukhan/secure', [AdminController::class , 'BankTransferSel']);
+Route::post('edit/kyc/sel/account/{id}/habukhan/secure', [AdminController::class , 'KycSel']);
 Route::post('edit/examsel/account/{id}/habukhan/secure', [AdminController::class , 'ExamSel']);
 Route::get('website/app/cable/lock', [AppController::class , 'CableName']);
 Route::get('bill/charges/{id}/admin', [AppController::class , 'BillCal']);
@@ -429,6 +430,7 @@ Route::get('bulksms/sel/by/system/{id}/secure', [Selection::class , 'BulksmsSel'
 Route::get('bill/sel/by/system/{id}/secure', [Selection::class , 'BillSel']);
 Route::get('exam/sel/by/system/{id}/secure', [Selection::class , 'ResultSel']);
 Route::get('bank-transfer/sel/by/system/{id}/secure', [Selection::class , 'BankTransferSel']);
+Route::get('kyc/sel/by/system/{id}/secure', [Selection::class , 'KycSel']);
 Route::get('data_card_sel/system/{id}/data_card', [Selection::class , 'DataCard']);
 Route::get('recharge_card_sel/system/{id}/recharge_card', [Selection::class , 'RechargeCard']);
 

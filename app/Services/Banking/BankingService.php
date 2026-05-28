@@ -6,6 +6,7 @@ use App\Services\Banking\Providers\PaystackProvider;
 use App\Services\Banking\Providers\XixapayProvider;
 use App\Services\Banking\Providers\MonnifyProvider;
 use App\Services\Banking\Providers\PointWaveProvider;
+use App\Services\Banking\Providers\KobopointProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +26,8 @@ class BankingService
                 return new MonnifyProvider();
             case 'paystack':
                 return new PaystackProvider();
+            case 'kobopoint':
+                return new KobopointProvider();
             default:
                 return new PointWaveProvider(); // Default to PointWave
         }

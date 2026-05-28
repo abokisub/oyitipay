@@ -7,14 +7,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Services\PointWaveService;
+use App\Services\KobopointService;
 
 class KYCController extends Controller
 {
-    protected $pointWaveService;
-
-    public function __construct()
+    /**
+     * Resolve the active KYC service based on `kyc_sel` table.
+     */
+    private function resolveKycService()
     {
-        $this->pointWaveService = new PointWaveService();
+        $sel = DB::table('kyc_sel')->first();
+        $provider = $sel->kyc ?? 'pointwave'; // Default to pointwave if not set
+
+        if ($provider === 'kobopoint') {
+            return new KobopointService();
+        }
+
+        return new PointWaveService();
     }
 
     /**
@@ -194,14 +203,19 @@ class KYCController extends Controller
                 'daily_limit' => $tierData['daily_limit']
             ]);
 
-            // Submit KYC to PointWave
+            // Split name
             $nameParts = explode(' ', $user->name ?? '');
             $firstName = $nameParts[0] ?? 'User';
             $lastName = implode(' ', array_slice($nameParts, 1)) ?: $firstName;
 
-            \Log::info("KYC: Submitting to PointWave for User {$user->id} | Type: {$request->id_type} | Number: {$request->id_number}");
+            // Resolve dynamic provider
+            $sel = DB::table('kyc_sel')->first();
+            $providerName = $sel->kyc ?? 'pointwave';
+            $kycService = $this->resolveKycService();
 
-            $result = $this->pointWaveService->submitKYC([
+            \Log::info("KYC: Submitting to {$providerName} for User {$user->id} | Type: {$request->id_type} | Number: {$request->id_number}");
+
+            $result = $kycService->submitKYC([
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'email' => $user->email,
@@ -243,13 +257,13 @@ class KYCController extends Controller
                         'full_response_json' => json_encode($result['data'] ?? []),
                         'status' => 'verified',
                         'verified_at' => now(),
-                        'provider' => 'pointwave',
+                        'provider' => $providerName,
                         'created_at' => now(),
                         'updated_at' => now()
                     ]
                 );
 
-                \Log::info("KYC: PointWave verification SUCCESS for User {$user->id}");
+                \Log::info("KYC: {$providerName} verification SUCCESS for User {$user->id}");
 
                 return response()->json([
                     'status' => 'success',
@@ -263,7 +277,7 @@ class KYCController extends Controller
             }
 
             $errorMessage = $result['message'] ?? 'KYC verification failed';
-            \Log::warning("KYC: PointWave verification FAILED for User {$user->id}. Message: {$errorMessage}");
+            \Log::warning("KYC: {$providerName} verification FAILED for User {$user->id}. Message: {$errorMessage}");
 
             throw new \Exception($errorMessage);
 

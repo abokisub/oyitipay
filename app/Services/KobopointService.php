@@ -203,6 +203,58 @@ class KobopointService
     }
 
     // ==================================================================
+    // KYC METHODS
+    // ==================================================================
+
+    /**
+     * Unified KYC submission for PointWave compatibility.
+     */
+    public function submitKYC(array $data)
+    {
+        try {
+            \Log::info("KobopointService: Submitting KYC verification", [
+                'id_type' => $data['id_type'],
+                'user_email' => $data['email'] ?? 'unknown'
+            ]);
+
+            if ($data['id_type'] === 'bvn') {
+                $payload = [
+                    'bvn' => $data['id_number'],
+                    'first_name' => $data['first_name'],
+                    'last_name' => $data['last_name'],
+                    'dob' => $data['date_of_birth'],
+                ];
+                $result = $this->verifyBVN($payload);
+            } else {
+                $payload = [
+                    'nin' => $data['id_number'],
+                ];
+                $result = $this->verifyNIN($payload);
+            }
+
+            if ($result['status'] === true) {
+                return [
+                    'status' => 'success',
+                    'message' => $result['message'] ?? 'Verification successful',
+                    'data' => $result['data'] ?? []
+                ];
+            }
+
+            return [
+                'status' => 'error',
+                'message' => $result['message'] ?? 'Verification failed'
+            ];
+
+        } catch (\Exception $e) {
+            \Log::error("KobopointService KYC Error: " . $e->getMessage());
+            return [
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    // ==================================================================
     // 4. BANKS
     // ==================================================================
 
