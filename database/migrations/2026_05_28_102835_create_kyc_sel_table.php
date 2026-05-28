@@ -13,25 +13,28 @@ class CreateKycSelTable extends Migration
      */
     public function up()
     {
-        Schema::create('kyc_sel', function (Blueprint $table) {
-            $table->id();
-            $table->string('kyc')->default('kobopoint');
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('kyc_sel')) {
+            Schema::create('kyc_sel', function (Blueprint $table) {
+                $table->id();
+                $table->string('kyc')->default('kobopoint');
+                $table->timestamps();
+            });
+        }
 
-        // Insert default row for KYC
-        DB::table('kyc_sel')->insert([
-            'kyc' => 'kobopoint',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // Insert default row for KYC if table is empty
+        if (DB::table('kyc_sel')->count() == 0) {
+            DB::table('kyc_sel')->insert([
+                'kyc' => 'kobopoint',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         // Also add kobopoint to transfer providers
         DB::table('transfer_providers')->updateOrInsert(
             ['slug' => 'kobopoint'],
             [
                 'name' => 'Kobopoint',
-                'is_active' => 1,
                 'is_locked' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
