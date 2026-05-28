@@ -223,10 +223,18 @@ class PointWaveController extends Controller
 
         try {
             $bankingService = app(\App\Services\Banking\BankingService::class);
+            
+            \Log::info("MOBILE APP VERIFY HIT: ", [
+                'account' => $request->account_number,
+                'bank' => $request->bank_code
+            ]);
+            
             $result = $bankingService->verifyAccount(
                 $request->account_number,
                 $request->bank_code
             );
+
+            \Log::info("MOBILE APP VERIFY SUCCESS: ", $result);
 
             // If BankingService->verifyAccount returns, it means it succeeded (failures throw Exceptions).
             // It returns an array like ['account_name' => '...', 'account_number' => '...']
@@ -241,14 +249,15 @@ class PointWaveController extends Controller
                 'cached' => $result['cached'] ?? false,
             ]);
         } catch (\Exception $e) {
+            \Log::error("MOBILE APP VERIFY FAILED: " . $e->getMessage() . "\n" . $e->getTraceAsString());
             Log::channel('pointwave')->error('Verify account error', [
                 'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to verify account',
-            ], 500);
+                'message' => $e->getMessage(),
+            ], 400); // Changed to 400 so mobile app can read the error message
         }
     }
 
