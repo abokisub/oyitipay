@@ -1511,6 +1511,16 @@ class AuthController extends Controller
             ];
         }
         
+                $settings = DB::table('settings')->first();
+        $defaultProvider = $settings->default_virtual_account ?? 'palmpay';
+        
+        // Sort: default provider first
+        usort($accounts, function($a, $b) use ($defaultProvider) {
+            if ($a['provider'] == $defaultProvider) return -1;
+            if ($b['provider'] == $defaultProvider) return 1;
+            return 0;
+        });
+
         return $accounts;
     }
 }
