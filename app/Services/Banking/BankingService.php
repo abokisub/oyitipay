@@ -42,17 +42,7 @@ class BankingService
     {
         // Check settings for preferred provider
         $settings = DB::table('settings')->first();
-        $preferredProvider = $settings->transfer_provider ?? 'pointwave';
-        
-        // Allow Xixapay as alternative provider
-        if ($preferredProvider === 'xixapay') {
-            return new XixapayProvider();
-        }
-        
-        // Enforce PointWave as default
-        if ($preferredProvider === 'pointwave' || empty($preferredProvider)) {
-            return new PointWaveProvider();
-        }
+        $preferredProvider = $settings->primary_transfer_provider ?? $settings->transfer_provider ?? 'pointwave';
         
         // Allow fallback to other providers if explicitly set
         return $this->resolveProvider($preferredProvider);
@@ -69,22 +59,34 @@ class BankingService
         $providerSlug = $provider->getProviderSlug();
 
         try {
-            // IMPORTANT: Convert old bank codes to PointWave codes
-            // This handles cases where mobile app sends old cached codes
-            $pointwaveCode = $this->convertToPointWaveCode($bankCode);
+            // Resolve the generic bank code to the provider's specific code
+            $resolvedCode = $this->resolveBankCode($bankCode, $providerSlug);
             
-            if ($pointwaveCode !== $bankCode) {
-                Log::info("BankingService: Converted old bank code", [
+            if ($resolvedCode !== $bankCode) {
+                Log::info("BankingService: Converted bank code", [
+                    'provider' => $providerSlug,
                     'old_code' => $bankCode,
-                    'new_code' => $pointwaveCode
+                    'new_code' => $resolvedCode
                 ]);
             }
             
-            return $provider->verifyAccount($accountNumber, $pointwaveCode);
+            return $provider->verifyAccount($accountNumber, $resolvedCode);
 
         }
         catch (\Exception $e) {
             Log::error("BankingService: Verification failed ({$providerSlug}): " . $e->getMessage());
+
+            // Temporary Fallback to PointWave for verification since Kobopoint is broken
+            if ($providerSlug !== 'pointwave') {
+                try {
+                    $pwProvider = $this->resolveProvider('pointwave');
+                    $pwCode = $this->resolveBankCode($bankCode, 'pointwave');
+                    return $pwProvider->verifyAccount($accountNumber, $pwCode);
+                } catch (\Exception $fallbackE) {
+                    throw $fallbackE;
+                }
+            }
+
             throw $e;
         }
     }
@@ -120,17 +122,18 @@ class BankingService
         $provider = $this->getActiveProvider();
         $providerSlug = $provider->getProviderSlug();
 
-        // IMPORTANT: Convert old bank codes to PointWave codes
-        $pointwaveCode = $this->convertToPointWaveCode($details['bank_code']);
+        // Resolve the generic bank code to the provider's specific code
+        $resolvedCode = $this->resolveBankCode($details['bank_code'], $providerSlug);
         
-        if ($pointwaveCode !== $details['bank_code']) {
-            Log::info("BankingService: Converted old bank code for transfer", [
+        if ($resolvedCode !== $details['bank_code']) {
+            Log::info("BankingService: Converted bank code for transfer", [
+                'provider' => $providerSlug,
                 'old_code' => $details['bank_code'],
-                'new_code' => $pointwaveCode
+                'new_code' => $resolvedCode
             ]);
         }
         
-        $details['bank_code'] = $pointwaveCode;
+        $details['bank_code'] = $resolvedCode;
 
         try {
             $result = $provider->transfer($details);

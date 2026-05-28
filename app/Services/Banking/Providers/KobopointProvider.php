@@ -2,7 +2,7 @@
 
 namespace App\Services\Banking\Providers;
 
-use App\Services\Banking\Contracts\BankingProviderInterface;
+use App\Services\Banking\BankingProviderInterface;
 use App\Services\KobopointService;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -105,10 +105,70 @@ class KobopointProvider implements BankingProviderInterface
             ];
 
         } catch (Exception $e) {
-            Log::error('Kobopoint Transfer Exception: ' . $e->getMessage());
+            Log::error('KobopointProvider: Transfer Exception: ' . $e->getMessage());
             return [
                 'status'  => false,
                 'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get provider wallet balance.
+     */
+    public function getBalance(): float
+    {
+        try {
+            $response = $this->kobopointService->getWalletBalance();
+
+            if ($response['status'] ?? false) {
+                $data = $response['data'] ?? [];
+                return (float) ($data['balance'] ?? $data['available_balance'] ?? 0.0);
+            }
+
+            return 0.0;
+        } catch (Exception $e) {
+            Log::error('KobopointProvider: Failed to get balance: ' . $e->getMessage());
+            return 0.0;
+        }
+    }
+
+    /**
+     * Query transfer status by reference.
+     */
+    public function queryTransfer(string $reference): array
+    {
+        try {
+            $response = $this->kobopointService->queryTransfer($reference);
+
+            if ($response['status'] ?? false) {
+                $data    = $response['data'] ?? [];
+                $rawStatus = strtolower($data['status'] ?? 'pending');
+
+                if (in_array($rawStatus, ['success', 'successful', 'completed'])) {
+                    $status = 'success';
+                } elseif (in_array($rawStatus, ['pending', 'processing'])) {
+                    $status = 'pending';
+                } else {
+                    $status = 'failed';
+                }
+
+                return [
+                    'status'  => $status,
+                    'message' => $data['message'] ?? 'Status retrieved',
+                    'data'    => $data,
+                ];
+            }
+
+            return [
+                'status'  => 'failed',
+                'message' => $response['message'] ?? 'Query failed',
+            ];
+        } catch (Exception $e) {
+            Log::error('KobopointProvider: Query transfer failed: ' . $e->getMessage());
+            return [
+                'status'  => 'failed',
+                'message' => 'Query failed: ' . $e->getMessage(),
             ];
         }
     }

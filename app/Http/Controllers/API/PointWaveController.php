@@ -222,15 +222,17 @@ class PointWaveController extends Controller
         }
 
         try {
-            $result = $this->pointWaveService->verifyBankAccount(
+            $bankingService = app(\App\Services\Banking\BankingService::class);
+            $result = $bankingService->verifyAccount(
                 $request->account_number,
                 $request->bank_code
             );
 
-            if (!$result['success']) {
+            // BankingService returns ['status' => true/false, 'data' => ...]
+            if (!$result['status'] && !($result['success'] ?? false)) {
                 return response()->json([
                     'success' => false,
-                    'message' => $result['error'] ?? 'Failed to verify account',
+                    'message' => $result['message'] ?? $result['error'] ?? 'Failed to verify account',
                 ], 400);
             }
 
@@ -320,9 +322,9 @@ class PointWaveController extends Controller
                     'narration' => $request->narration ?? 'Transfer',
                 ]);
 
-                // Call PointWave API
-                $result = $this->pointWaveService->initiateTransfer([
-                    'user_id' => $user->id,
+                // Call BankingService API to route to active provider
+                $bankingService = app(\App\Services\Banking\BankingService::class);
+                $result = $bankingService->transfer([
                     'amount' => $amount,
                     'account_number' => $request->account_number,
                     'bank_code' => $request->bank_code,
@@ -331,23 +333,22 @@ class PointWaveController extends Controller
                     'reference' => $reference,
                 ]);
 
-                if (!$result['success']) {
+                if ($result['status'] === 'fail' || $result['status'] === 'failed' || (isset($result['success']) && !$result['success'])) {
                     // Rollback: refund wallet and mark transaction as failed
                     $user->increment('bal', $totalDeduction);
-                    $transaction->update(['status' => 'failed', 'narration' => $result['error'] ?? 'Transfer failed']);
+                    $transaction->update(['status' => 'failed', 'narration' => $result['message'] ?? $result['error'] ?? 'Transfer failed']);
                     
                     DB::commit();
 
                     return response()->json([
                         'success' => false,
-                        'message' => $result['error'] ?? 'Failed to initiate transfer',
+                        'message' => $result['message'] ?? $result['error'] ?? 'Failed to initiate transfer',
                     ], 400);
                 }
 
-                // Update transaction with PointWave transaction ID
-                $responseData = $result['data']['data'] ?? $result['data'];
+                // Update transaction with provider transaction ID
                 $transaction->update([
-                    'pointwave_transaction_id' => $responseData['transaction_id'] ?? null,
+                    'pointwave_transaction_id' => $result['reference'] ?? ($result['data']['data']['transaction_id'] ?? null),
                 ]);
 
                 DB::commit();

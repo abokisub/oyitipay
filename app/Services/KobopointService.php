@@ -39,8 +39,8 @@ class KobopointService
     private function headers(): array
     {
         return [
-            'X-Business-ID' => $this->businessId,
-            'X-Api-Key'     => $this->apiKey,
+            'businessId'    => $this->businessId,
+            'api-key'       => $this->apiKey,
             'Authorization' => 'Bearer ' . $this->secretKey,
             'Content-Type'  => 'application/json',
             'Accept'        => 'application/json',
@@ -50,8 +50,8 @@ class KobopointService
     private function multipartHeaders(): array
     {
         return [
-            'X-Business-ID' => $this->businessId,
-            'X-Api-Key'     => $this->apiKey,
+            'businessId'    => $this->businessId,
+            'api-key'       => $this->apiKey,
             'Authorization' => 'Bearer ' . $this->secretKey,
             'Accept'        => 'application/json',
         ];
@@ -287,8 +287,8 @@ class KobopointService
 
         return $this->safe(function () use ($bankCode, $accountNumber, $cacheKey) {
             $result = $this->parse($this->http()->post("{$this->baseUrl}/banks/verify", [
-                'bank_code'      => $bankCode,
-                'account_number' => $accountNumber,
+                'bank'          => $bankCode,
+                'accountNumber' => $accountNumber,
             ]));
             if ($result['status']) {
                 Cache::put($cacheKey, $result['data'], now()->addHours(24));
