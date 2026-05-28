@@ -558,5 +558,8 @@ Route::prefix('pointwave')->middleware('auth:sanctum')->group(function () {
     Route::get('kyc/easeid-balance', [\App\Http\Controllers\API\PointWaveController::class, 'getEaseIDBalance']);
 });
 
+// Kobopoint Webhook Route
+Route::post('kobopoint-webhook', [\App\Http\Controllers\API\KobopointWebhookController::class, 'handleWebhook']);
+
 // PointWave Webhook Route (no auth, signature verification in middleware)
 Route::post('pointwave/webhook', [\App\Http\Controllers\API\PointWaveWebhookController::class, 'handleWebhook']);
