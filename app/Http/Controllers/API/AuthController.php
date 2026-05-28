@@ -1431,7 +1431,7 @@ class AuthController extends Controller
         foreach ($pwAccounts as $pwAcc) {
             if (!collect($accounts)->where('account_number', $pwAcc->account_number)->count()) {
                 $accounts[] = [
-                    'provider' => 'kobopoint',
+                    'provider' => 'pointwave', // Mobile app expects 'pointwave' to render the UI correctly
                     'bank_name' => strtoupper($pwAcc->bank_name ?? 'PALMPAY'),
                     'account_number' => $pwAcc->account_number,
                     'account_name' => $pwAcc->account_name
