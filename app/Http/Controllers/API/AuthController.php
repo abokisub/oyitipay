@@ -175,6 +175,7 @@ class AuthController extends Controller
                         $koboAcc = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->first();
                         if ($koboAcc) {
                             $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
                         }
 
                         $user_details = [
@@ -376,6 +377,7 @@ class AuthController extends Controller
                     $koboAcc = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->first();
                     if ($koboAcc) {
                         $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
                     }
 
                     $user_details = [
@@ -557,6 +559,7 @@ class AuthController extends Controller
                 $koboAcc = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->first();
                 if ($koboAcc) {
                     $user->palmpay = $koboAcc->account_number;
+                    $user->opay = $koboAcc->account_number;
                 }
 
                 $user_details = [
@@ -758,6 +761,7 @@ class AuthController extends Controller
                         $koboAcc = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->first();
                         if ($koboAcc) {
                             $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
                         }
 
                         $user_details = [
