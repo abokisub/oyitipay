@@ -63,10 +63,17 @@ class AccountVerification extends Controller
                     }
 
                     // Use the new BankingService with Smart Failover
-                    $bankingService = new \App\Services\Banking\BankingService();
+                    $bankingService = app(\App\Services\Banking\BankingService::class);
                     $result = $bankingService->verifyAccount($accountNumber, $bankCode);
 
-                    return response()->json($result);
+                    return response()->json([
+                        'status' => 'success',
+                        'data' => [
+                            'account_name' => $result['account_name'] ?? 'Unknown',
+                            'account_number' => $result['account_number'] ?? $accountNumber,
+                            'bank_code' => $bankCode
+                        ]
+                    ]);
 
                 } catch (\Exception $e) {
                     Log::error('Account Verification Error: ' . $e->getMessage());
