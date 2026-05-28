@@ -2218,6 +2218,15 @@ class AdminController extends Controller
                             'virtual_account_charge_type' => strtoupper($request->virtual_account_charge_type),
                             'virtual_account_charge_value' => $request->virtual_account_charge_value,
                             'virtual_account_charge_cap' => $request->virtual_account_charge_cap,
+                            
+                            // SYNC ALL INDIVIDUAL CHARGES TO GLOBAL CHARGE FOR WEBHOOKS
+                            'pointwave_charge_type' => strtoupper($request->virtual_account_charge_type),
+                            'pointwave_charge_value' => $request->virtual_account_charge_value,
+                            'pointwave_charge_cap' => $request->virtual_account_charge_cap,
+                            'monnify_charge' => $request->virtual_account_charge_value,
+                            'xixapay_charge' => $request->virtual_account_charge_value,
+                            'paymentpoint_charge' => $request->virtual_account_charge_value,
+                            'paystack_charge' => $request->virtual_account_charge_value,
                         ];
                         DB::table('settings')->update($data);
 
@@ -3451,7 +3460,13 @@ class AdminController extends Controller
                         }
                     }
                     if ($request->has('virtual_account_charge_value')) {
-                        $unifiedUpdates['virtual_account_charge_value'] = max(0, floatval($request->virtual_account_charge_value));
+                        $val = max(0, floatval($request->virtual_account_charge_value));
+                        $unifiedUpdates['virtual_account_charge_value'] = $val;
+                        $unifiedUpdates['pointwave_charge_value'] = $val;
+                        $unifiedUpdates['monnify_charge'] = $val;
+                        $unifiedUpdates['xixapay_charge'] = $val;
+                        $unifiedUpdates['paymentpoint_charge'] = $val;
+                        $unifiedUpdates['paystack_charge'] = $val;
                     }
                     if ($request->has('virtual_account_charge_cap')) {
                         $unifiedUpdates['virtual_account_charge_cap'] = max(0, floatval($request->virtual_account_charge_cap));
