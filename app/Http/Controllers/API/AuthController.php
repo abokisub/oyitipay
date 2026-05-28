@@ -1427,6 +1427,7 @@ class AuthController extends Controller
         }
         
         // Add PointWave accounts from pointwave_virtual_accounts table
+        $hasNewPointwave = false;
         $pwAccounts = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->get();
         foreach ($pwAccounts as $pwAcc) {
             if (!collect($accounts)->where('account_number', $pwAcc->account_number)->count()) {
@@ -1436,11 +1437,12 @@ class AuthController extends Controller
                     'account_number' => $pwAcc->account_number,
                     'account_name' => $pwAcc->account_name
                 ];
+                $hasNewPointwave = true;
             }
         }
 
-        // Add PointWave if exists and not already in list
-        if (!empty($user->pointwave_account_number) && !collect($accounts)->where('account_number', $user->pointwave_account_number)->count()) {
+        // Add PointWave if exists and not already in list, ONLY if they don't have a new one
+        if (!$hasNewPointwave && !empty($user->pointwave_account_number) && !collect($accounts)->where('account_number', $user->pointwave_account_number)->count()) {
             $accounts[] = [
                 'provider' => 'pointwave',
                 'bank_name' => 'PALMPAY BANKS',
