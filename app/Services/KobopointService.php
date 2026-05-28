@@ -202,6 +202,13 @@ class KobopointService
         ));
     }
 
+    public function createVirtualAccount(array $data): array
+    {
+        return $this->safe(fn() => $this->parse(
+            $this->http()->post("{$this->baseUrl}/virtual-accounts", $data)
+        ));
+    }
+
     // ==================================================================
     // KYC METHODS
     // ==================================================================
