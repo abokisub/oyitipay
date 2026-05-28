@@ -97,10 +97,7 @@ class PointWaveController extends Controller
                     'phone_number' => $phoneNumber,
                     'first_name' => $firstName,
                     'last_name' => $lastName,
-                    'account_type' => 'static',
-                    'bank_codes' => ['100033'], // PalmPay
-                    'businessId' => $businessId,
-                    'externalReference' => 'USER_' . $user->id
+                    'external_reference' => 'USER_' . $user->id
                 ];
 
                 Log::channel('pointwave')->info('Creating Kobopoint virtual account via proxy', [
@@ -108,26 +105,37 @@ class PointWaveController extends Controller
                     'email' => $payload['email'],
                 ]);
 
-                $accountResult = $kobopointService->createVirtualAccount($payload);
+                // Call the original smart endpoint method
+                $accountResult = $kobopointService->createVirtualAccount(
+                    $payload, 
+                    $user->name, 
+                    'static', 
+                    ['100033'] // PalmPay
+                );
 
                 if (!($accountResult['status'] ?? $accountResult['success'] ?? false)) {
                     return response()->json([
                         'success' => false,
                         'message' => $accountResult['message'] ?? $accountResult['error'] ?? 'Failed to create virtual account',
+                        'raw_api_response' => $accountResult['raw'] ?? $accountResult
                     ], 400);
                 }
 
                 $responseData = $accountResult['data'];
-                $customerId = $responseData['customer_id'] ?? ('KBP_' . $user->id);
+                
+                // Extract from bankAccounts array
+                $bankAccount = $responseData['bankAccounts'][0] ?? [];
+                
+                $customerId = $responseData['customer']['customer_id'] ?? ('KBP_' . $user->id);
                 
                 // Store in database
                 $virtualAccount = PointWaveVirtualAccount::create([
                     'user_id' => $user->id,
                     'customer_id' => $customerId,
-                    'account_number' => $responseData['account_number'] ?? null,
-                    'account_name' => $responseData['account_name'] ?? $user->name,
-                    'bank_name' => $responseData['bank_name'] ?? 'PalmPay',
-                    'bank_code' => $responseData['bank_code'] ?? '100033',
+                    'account_number' => $bankAccount['accountNumber'] ?? null,
+                    'account_name' => $bankAccount['accountName'] ?? $user->name,
+                    'bank_name' => $bankAccount['bankName'] ?? 'PalmPay',
+                    'bank_code' => $bankAccount['bankCode'] ?? '100033',
                     'status' => 'active',
                     'external_reference' => $responseData['reference'] ?? null,
                 ]);
