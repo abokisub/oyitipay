@@ -1406,8 +1406,24 @@ class AuthController extends Controller
         // Also add accounts from user table if not in user_bank
         $user = DB::table('user')->where('username', $username)->first();
         
-        // Add PalmPay if exists and not already in list
-        if (!empty($user->palmpay) && !collect($accounts)->where('account_number', $user->palmpay)->count()) {
+        // Add Kobopoint (PalmPay) accounts from pointwave_virtual_accounts table
+        // These will replace the old Xixapay PalmPay in the app
+        $hasNewPalmpay = false;
+        $pwAccounts = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->get();
+        foreach ($pwAccounts as $pwAcc) {
+            if (!collect($accounts)->where('account_number', $pwAcc->account_number)->count()) {
+                $accounts[] = [
+                    'provider' => 'palmpay', // Map to palmpay slot
+                    'bank_name' => strtoupper($pwAcc->bank_name ?? 'PALMPAY'),
+                    'account_number' => $pwAcc->account_number,
+                    'account_name' => $pwAcc->account_name
+                ];
+                $hasNewPalmpay = true;
+            }
+        }
+
+        // Add OLD PalmPay (from Xixapay) ONLY if they don't have a new Kobopoint PalmPay
+        if (!$hasNewPalmpay && !empty($user->palmpay) && !collect($accounts)->where('account_number', $user->palmpay)->count()) {
             $accounts[] = [
                 'provider' => 'palmpay',
                 'bank_name' => 'PALMPAY',
@@ -1426,23 +1442,8 @@ class AuthController extends Controller
             ];
         }
         
-        // Add PointWave accounts from pointwave_virtual_accounts table
-        $hasNewPointwave = false;
-        $pwAccounts = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->get();
-        foreach ($pwAccounts as $pwAcc) {
-            if (!collect($accounts)->where('account_number', $pwAcc->account_number)->count()) {
-                $accounts[] = [
-                    'provider' => 'pointwave', // Mobile app expects 'pointwave' to render the UI correctly
-                    'bank_name' => strtoupper($pwAcc->bank_name ?? 'PALMPAY'),
-                    'account_number' => $pwAcc->account_number,
-                    'account_name' => $pwAcc->account_name
-                ];
-                $hasNewPointwave = true;
-            }
-        }
-
-        // Add PointWave if exists and not already in list, ONLY if they don't have a new one
-        if (!$hasNewPointwave && !empty($user->pointwave_account_number) && !collect($accounts)->where('account_number', $user->pointwave_account_number)->count()) {
+        // Add old PointWave if exists and not already in list (ALWAYS show it)
+        if (!empty($user->pointwave_account_number) && !collect($accounts)->where('account_number', $user->pointwave_account_number)->count()) {
             $accounts[] = [
                 'provider' => 'pointwave',
                 'bank_name' => 'PALMPAY BANKS',
