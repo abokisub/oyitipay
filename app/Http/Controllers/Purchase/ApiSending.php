@@ -119,7 +119,13 @@ class ApiSending extends Controller
                 $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
                 $res = json_decode($dataapi, true);
-                return self::checkGlobalLowBalance($res, $data['endpoint']);
+
+                $is_bill = (strpos($data['endpoint'], '/api/bill') !== false);
+                if ($is_bill && !empty($res) && isset($res['status']) && $res['status'] == 'success' && isset($res['data']['token'])) {
+                    $res['token'] = $res['data']['token'];
+                }
+
+                return $res;
 
             } else {
                 \Log::warning('HabukhanApi Auth Failed: ', ['response' => $json]);
