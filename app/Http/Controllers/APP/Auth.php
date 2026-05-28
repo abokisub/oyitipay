@@ -3770,16 +3770,36 @@ class Auth extends Controller
                 }
             }
 
-            // Perform Live Verification via PointWave
+            // CHECK FOR DUPLICATE BVN/NIN
+            $duplicateUser = DB::table('user_kyc')
+                ->where('id_number', $request->id_number)
+                ->where('user_id', '!=', $user->id)
+                ->first();
+            
+            if ($duplicateUser) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'This ' . strtoupper($request->id_type) . ' is already registered to another account. Each ' . strtoupper($request->id_type) . ' can only be used once.'
+                ], 400);
+            }
+
+            // Perform Live Verification
             try {
-                \Log::info("KYC: Initiating PointWave verification for User {$user->id} | Type: {$request->id_type} | Number: {$request->id_number}");
+                $sel = DB::table('kyc_sel')->first();
+                $providerName = $sel->kyc ?? 'pointwave';
+                if ($providerName === 'kobopoint') {
+                    $kycService = new \App\Services\KobopointService();
+                } else {
+                    $kycService = new \App\Services\PointWaveService();
+                }
+
+                \Log::info("KYC: Initiating {$providerName} verification for User {$user->id} | Type: {$request->id_type} | Number: {$request->id_number}");
                 
-                $pointWaveService = new \App\Services\PointWaveService();
                 $nameParts = explode(' ', $user->name ?? '');
                 $firstName = $nameParts[0] ?? 'User';
                 $lastName = implode(' ', array_slice($nameParts, 1)) ?: $firstName;
                 
-                $verification = $pointWaveService->submitKYC([
+                $verification = $kycService->submitKYC([
                     'first_name' => $firstName,
                     'last_name' => $lastName,
                     'email' => $user->email,
@@ -3791,28 +3811,28 @@ class Auth extends Controller
                 ]);
 
                 if ($verification['status'] !== 'success') {
-                    \Log::warning("KYC: PointWave verification FAILED for User {$user->id}. Message: " . ($verification['message'] ?? 'Unknown Error'));
+                    \Log::warning("KYC: {$providerName} verification FAILED for User {$user->id}. Message: " . ($verification['message'] ?? 'Unknown Error'));
                     return response()->json([
                         'status' => 'error',
                         'message' => $verification['message'] ?? strtoupper($request->id_type) . ' verification failed.'
                     ], 400);
                 }
 
-                \Log::info("KYC: PointWave verification SUCCESS for User {$user->id}");
+                \Log::info("KYC: {$providerName} verification SUCCESS for User {$user->id}");
                 
-                // Extract DOB from PointWave response if available (BVN verification returns actual DOB)
+                // Extract DOB from response if available (BVN verification returns actual DOB)
                 if ($request->id_type === 'bvn' && isset($verification['data']['date_of_birth'])) {
                     $updateData['dob'] = $verification['data']['date_of_birth'];
-                    \Log::info("KYC: Extracted DOB from PointWave BVN response: " . $verification['data']['date_of_birth']);
+                    \Log::info("KYC: Extracted DOB from {$providerName} BVN response: " . $verification['data']['date_of_birth']);
                 }
                 
                 // Determine tier and limits based on ID type
                 if ($request->id_type === 'bvn') {
-                    $updateData['kyc_tier'] = 'tier_2';
+                    $updateData['kyc_tier'] = 'tier2';
                     $updateData['single_limit'] = 500000.00;
                     $updateData['daily_limit'] = 2000000.00;
                 } else {
-                    $updateData['kyc_tier'] = 'tier_1';
+                    $updateData['kyc_tier'] = 'tier1';
                     $updateData['single_limit'] = 50000.00;
                     $updateData['daily_limit'] = 200000.00;
                 }
@@ -3854,7 +3874,7 @@ class Auth extends Controller
                     $kycData
                 );
             } catch (\Exception $e) {
-                \Log::error("Failed to store PointWave KYC: " . $e->getMessage());
+                \Log::error("Failed to store KYC in pointwave_kyc table: " . $e->getMessage());
             }
 
             // Synchronize with user_kyc table for Admin Dashboard Visibility
@@ -3867,7 +3887,7 @@ class Auth extends Controller
                 [
                     'id_number' => $request->id_number,
                     'full_response_json' => json_encode($verification['data'] ?? []),
-                    'provider' => 'pointwave',
+                    'provider' => $providerName ?? 'pointwave',
                     'status' => 'verified',
                     'verified_at' => now(),
                     'created_at' => now(),

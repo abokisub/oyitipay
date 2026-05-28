@@ -306,7 +306,7 @@ class KYCController extends Controller
     {
         if ($idType === 'bvn') {
             return [
-                'tier' => 'tier_2',
+                'tier' => 'tier2',
                 'single_limit' => 500000.00,
                 'daily_limit' => 2000000.00
             ];
@@ -314,7 +314,7 @@ class KYCController extends Controller
         
         // NIN or default
         return [
-            'tier' => 'tier_1',
+            'tier' => 'tier1',
             'single_limit' => 50000.00,
             'daily_limit' => 200000.00
         ];
