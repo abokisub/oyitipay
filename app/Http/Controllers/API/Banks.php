@@ -29,10 +29,12 @@ class Banks extends Controller
                     return response()->json(['message' => 'Unable to singin user', 'status' => 'fail'], 403);
                 }
                 // Use dynamic charges from settings
-                $monnify_charge = isset($setting->monnify_charge) ? $setting->monnify_charge : 20;
-                $paystack_charge = isset($setting->paystack_charge) ? $setting->paystack_charge : 0;
-                $paymentpoint_charge = isset($setting->paymentpoint_charge) ? $setting->paymentpoint_charge : 60;
-                $xixapay_charge = isset($setting->xixapay_charge) ? $setting->xixapay_charge : 60;
+                // Use GLOBAL virtual account charge for all
+                $global_charge = isset($setting->virtual_account_charge_value) ? $setting->virtual_account_charge_value : 0;
+                $monnify_charge = $global_charge;
+                $paystack_charge = $global_charge;
+                $paymentpoint_charge = $global_charge;
+                $xixapay_charge = $global_charge;
 
                 // Determine active PalmPay provider charge
                 $habukhan_key = DB::table('habukhan_key')->first();
@@ -68,6 +70,12 @@ class Banks extends Controller
                     $default_provider = 'palmpay';
                 }
 
+                // KOBOPOINT OVERRIDE
+                $koboAcc = DB::table('pointwave_virtual_accounts')->where('user_id', $auth_user->id)->first();
+                if ($koboAcc) {
+                    $auth_user->palmpay = $koboAcc->account_number;
+                }
+
                 $banks_array = [];
                 $default_bank = null;
 
@@ -76,15 +84,7 @@ class Banks extends Controller
                 // 1. PointWave (First - if it's enabled)
                 if (!is_null($auth_user->pointwave_account_number) && $pointwave_enabled) {
                     // Calculate PointWave charge
-                    $pointwave_charge_display = '';
-                    if ($settings->pointwave_charge_type === 'PERCENTAGE') {
-                        $pointwave_charge_display = $settings->pointwave_charge_value . '%';
-                        if ($settings->pointwave_charge_cap > 0) {
-                            $pointwave_charge_display .= ' (Max ₦' . $settings->pointwave_charge_cap . ')';
-                        }
-                    } else {
-                        $pointwave_charge_display = '₦' . $settings->pointwave_charge_value;
-                    }
+                    $pointwave_charge_display = $global_charge . ' NAIRA';
                     
                     // Use "PALMPAY BANKS" to differentiate from Xixapay's "PALMPAY"
                     $bank = [
