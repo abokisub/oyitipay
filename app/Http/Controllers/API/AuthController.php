@@ -1426,6 +1426,19 @@ class AuthController extends Controller
             ];
         }
         
+        // Add PointWave accounts from point_wave_virtual_accounts table
+        $pwAccounts = DB::table('point_wave_virtual_accounts')->where('user_id', $user->id)->get();
+        foreach ($pwAccounts as $pwAcc) {
+            if (!collect($accounts)->where('account_number', $pwAcc->account_number)->count()) {
+                $accounts[] = [
+                    'provider' => 'kobopoint',
+                    'bank_name' => strtoupper($pwAcc->bank_name ?? 'PALMPAY'),
+                    'account_number' => $pwAcc->account_number,
+                    'account_name' => $pwAcc->account_name
+                ];
+            }
+        }
+
         // Add PointWave if exists and not already in list
         if (!empty($user->pointwave_account_number) && !collect($accounts)->where('account_number', $user->pointwave_account_number)->count()) {
             $accounts[] = [
