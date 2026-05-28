@@ -3780,6 +3780,7 @@ class Auth extends Controller
                 ->first();
             
             if ($duplicateUser) {
+                \Log::warning("KYC: User {$user->id} attempted to use {$request->id_type} {$request->id_number} but it is already registered to user_id {$duplicateUser->user_id}");
                 return response()->json([
                     'status' => 'error',
                     'message' => 'This ' . strtoupper($request->id_type) . ' is already registered to another account. Each ' . strtoupper($request->id_type) . ' can only be used once.'
