@@ -237,14 +237,17 @@ class PointWaveController extends Controller
             \Log::info("MOBILE APP VERIFY SUCCESS: ", $result);
 
             // If BankingService->verifyAccount returns, it means it succeeded (failures throw Exceptions).
-            // It returns an array like ['account_name' => '...', 'account_number' => '...']
+            // The mobile app expects the data to be double-nested because PointWaveService wrapped the original JSON response
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'account_name' => $result['account_name'] ?? 'Unknown',
-                    'account_number' => $result['account_number'] ?? $request->account_number,
-                    'bank_code' => $request->bank_code,
-                    'bank_name' => $result['bank_name'] ?? 'Bank',
+                    'success' => true,
+                    'data' => [
+                        'account_name' => $result['account_name'] ?? 'Unknown',
+                        'account_number' => $result['account_number'] ?? $request->account_number,
+                        'bank_code' => $request->bank_code,
+                        'bank_name' => $result['bank_name'] ?? 'Bank',
+                    ]
                 ],
                 'cached' => $result['cached'] ?? false,
             ]);
