@@ -2182,10 +2182,7 @@ class AdminController extends Controller
                         'affliate_price' => 'required|numeric|integer|not_in:0|gt:0',
                         'awuf_price' => 'required|numeric|integer|not_in:0|gt:0',
                         'agent_price' => 'required|numeric|integer|not_in:0|gt:0',
-                        'monnify_charge' => 'required|numeric|between:0,100',
-                        'paystack_charge' => 'required|numeric|min:0',
-                        'xixapay_charge' => 'required|numeric|min:0',
-                        'paymentpoint_charge' => 'required|numeric|min:0',
+
                         'earning_min' => 'required|numeric|integer|not_in:0|gt:0',
                         'customer_amount' => 'required|numeric|integer|not_in:0|gt:0',
                         // Card Settings Validation
@@ -2197,10 +2194,10 @@ class AdminController extends Controller
                         'vcard_ngn_fund_fee' => 'nullable|numeric',
                         'vcard_usd_fund_fee' => 'nullable|numeric',
                         'vcard_ngn_failed_fee' => 'nullable|numeric',
-                        // PointWave Charge Settings Validation
-                        'pointwave_charge_type' => 'required|in:FLAT,PERCENTAGE',
-                        'pointwave_charge_value' => 'required|numeric|min:0',
-                        'pointwave_charge_cap' => 'required|numeric|min:0',
+                        // Virtual Account Charge Settings Validation
+                        'virtual_account_charge_type' => 'required|in:FLAT,PERCENTAGE',
+                        'virtual_account_charge_value' => 'required|numeric|min:0',
+                        'virtual_account_charge_cap' => 'required|numeric|min:0',
                     ]);
                     if ($main_validator->fails()) {
                         return response()->json([
@@ -2215,15 +2212,12 @@ class AdminController extends Controller
                             'affliate_price' => $request->affliate_price,
                             'awuf_price' => $request->awuf_price,
                             'agent_price' => $request->agent_price,
-                            'monnify_charge' => $request->monnify_charge,
-                            'paystack_charge' => $request->paystack_charge,
-                            'xixapay_charge' => $request->xixapay_charge,
-                            'paymentpoint_charge' => $request->paymentpoint_charge,
+
                             'earning_min' => $request->earning_min,
                             'customer_amount' => $request->customer_amount,
-                            'pointwave_charge_type' => strtoupper($request->pointwave_charge_type),
-                            'pointwave_charge_value' => $request->pointwave_charge_value,
-                            'pointwave_charge_cap' => $request->pointwave_charge_cap,
+                            'virtual_account_charge_type' => strtoupper($request->virtual_account_charge_type),
+                            'virtual_account_charge_value' => $request->virtual_account_charge_value,
+                            'virtual_account_charge_cap' => $request->virtual_account_charge_cap,
                         ];
                         DB::table('settings')->update($data);
 
@@ -3392,23 +3386,23 @@ class AdminController extends Controller
                         DB::table('card_settings')->updateOrInsert(['id' => 1], ['ngn_rate' => $request->card_ngn_rate]);
                     }
 
-                    // Update PointWave Charge Settings
-                    $pointwaveUpdates = [];
-                    if ($request->has('pointwave_charge_type')) {
-                        $chargeType = strtoupper($request->pointwave_charge_type);
+                    // Update Unified Virtual Account Charge Settings
+                    $unifiedUpdates = [];
+                    if ($request->has('virtual_account_charge_type')) {
+                        $chargeType = strtoupper($request->virtual_account_charge_type);
                         if (in_array($chargeType, ['FLAT', 'PERCENTAGE'])) {
-                            $pointwaveUpdates['pointwave_charge_type'] = $chargeType;
+                            $unifiedUpdates['virtual_account_charge_type'] = $chargeType;
                         }
                     }
-                    if ($request->has('pointwave_charge_value')) {
-                        $pointwaveUpdates['pointwave_charge_value'] = max(0, floatval($request->pointwave_charge_value));
+                    if ($request->has('virtual_account_charge_value')) {
+                        $unifiedUpdates['virtual_account_charge_value'] = max(0, floatval($request->virtual_account_charge_value));
                     }
-                    if ($request->has('pointwave_charge_cap')) {
-                        $pointwaveUpdates['pointwave_charge_cap'] = max(0, floatval($request->pointwave_charge_cap));
+                    if ($request->has('virtual_account_charge_cap')) {
+                        $unifiedUpdates['virtual_account_charge_cap'] = max(0, floatval($request->virtual_account_charge_cap));
                     }
 
-                    if (!empty($pointwaveUpdates)) {
-                        DB::table('settings')->where('id', 1)->update($pointwaveUpdates);
+                    if (!empty($unifiedUpdates)) {
+                        DB::table('settings')->where('id', 1)->update($unifiedUpdates);
                     }
 
                     return response()->json(['status' => 'success', 'message' => 'Settings Updated']);

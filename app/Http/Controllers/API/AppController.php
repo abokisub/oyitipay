@@ -68,24 +68,17 @@ class AppController extends Controller
         $origin = $request->headers->get('origin');
         if (!$origin || in_array($origin, $explode_url)) {
             $settings = DB::table('settings')->select(
-                'monnify_charge', 
-                'xixapay_charge', 
-                'paystack_charge',
-                'pointwave_charge_type',
-                'pointwave_charge_value',
-                'pointwave_charge_cap'
+                'virtual_account_charge_type',
+                'virtual_account_charge_value',
+                'virtual_account_charge_cap'
             )->first();
             $cardSettings = DB::table('card_settings')->where('id', 1)->first();
 
             return response()->json([
                 'status' => 'success',
-                'monnify_charge' => $settings->monnify_charge ?? '0',
-                'xixapay_charge' => $settings->xixapay_charge ?? '0',
-                'glode_charge' => $settings->xixapay_charge ?? '0',
-                'paystack_charge' => $settings->paystack_charge ?? '0',
-                'pointwave_charge_type' => $settings->pointwave_charge_type ?? 'FLAT',
-                'pointwave_charge_value' => $settings->pointwave_charge_value ?? '0.00',
-                'pointwave_charge_cap' => $settings->pointwave_charge_cap ?? '0.00',
+                'virtual_account_charge_type' => $settings->virtual_account_charge_type ?? 'FLAT',
+                'virtual_account_charge_value' => $settings->virtual_account_charge_value ?? '0.00',
+                'virtual_account_charge_cap' => $settings->virtual_account_charge_cap ?? '0.00',
                 'vcard_ngn_fee' => $cardSettings->ngn_creation_fee ?? 500,
                 'vcard_usd_fee' => $cardSettings->usd_creation_fee ?? 3,
                 'vcard_usd_rate' => $cardSettings->ngn_rate ?? 1600,

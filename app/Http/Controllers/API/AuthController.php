@@ -110,7 +110,6 @@ class AuthController extends Controller
                             $palmpay_enabled = $settings->palmpay_enabled ?? true;
                             $pointwave_enabled = $settings->pointwave_enabled ?? false;
                             $default_virtual_account = $settings->default_virtual_account ?? 'palmpay';
-                            $default_virtual_account = ($default_virtual_account == 'palmpay') ? 'xixapay' : $default_virtual_account; // Migration for name change if needed
                         } catch (\Exception $e) {
                             $monnify_enabled = false;
                             $wema_enabled = false;
@@ -155,8 +154,13 @@ class AuthController extends Controller
                             \Log::error("Register PointWave: " . $e->getMessage());
                         }
 
-                        // if ($palmpay_enabled || $monnify_enabled)
-                        //    $this->paymentpoint_account($user->username);
+                        try {
+                            if ($palmpay_enabled)
+                                $this->kobopoint_account($user->username);
+                        } catch (\Exception $e) {
+                            \Log::error("Register Kobopoint: " . $e->getMessage());
+                        }
+
                         try {
                             $this->paystack_account($user->username);
                         } catch (\Exception $e) {
@@ -184,26 +188,28 @@ class AuthController extends Controller
                             'vdf' => (isset($user->vdf)) ? $user->vdf : null,
                             'fed' => (isset($user->fed)) ? $user->fed : null,
                             'wema' => (isset($user->wema)) ? $user->wema : null,
-                            'opay' => $xixapay_enabled ? (isset($user->palmpay) ? $user->palmpay : null) : null,
+                            'opay' => $palmpay_enabled ? (isset($user->palmpay) ? $user->palmpay : null) : null,
                             'kolomoni_mfb' => $xixapay_enabled ? (isset($user->kolomoni_mfb) ? $user->kolomoni_mfb : null) : null,
-                            'palmpay' => null,
+                            'palmpay' => $palmpay_enabled ? (isset($user->palmpay) ? $user->palmpay : null) : null,
                             'pointwave' => $pointwave_enabled ? (isset($user->pointwave_account_number) ? $user->pointwave_account_number : null) : null,
                             'pointwave_bank' => $pointwave_enabled ? (isset($user->pointwave_bank_name) ? $user->pointwave_bank_name : null) : null,
 
                             // Smart Fallback: If default provider account is missing, fallback to next available
                             'account_number' => ($active_default == 'pointwave' && $pointwave_enabled && isset($user->pointwave_account_number)) ? $user->pointwave_account_number :
-                                (($active_default == 'xixapay' && $xixapay_enabled && isset($user->palmpay)) ? $user->palmpay :
+                                (($active_default == 'palmpay' && $palmpay_enabled && isset($user->palmpay)) ? $user->palmpay :
+                                (($active_default == 'xixapay' && $xixapay_enabled && isset($user->kolomoni_mfb)) ? $user->kolomoni_mfb :
                                     (($active_default == 'monnify' && $monnify_enabled && $moniepoint_acc) ? $moniepoint_acc :
                                         (($active_default == 'wema' && $wema_enabled && isset($user->paystack_account)) ? $user->paystack_account :
-                                            // Fallback chain: PointWave PalmPay -> Xixapay PalmPay -> Kolomoni -> Wema -> Moniepoint
+                                            // Fallback chain: PointWave -> PalmPay -> Kolomoni -> Wema -> Moniepoint
                                             (isset($user->pointwave_account_number) ? $user->pointwave_account_number :
                                                 (isset($user->palmpay) ? $user->palmpay :
                                                     (isset($user->kolomoni_mfb) ? $user->kolomoni_mfb :
                                                         (isset($user->paystack_account) ? $user->paystack_account :
-                                                            ($moniepoint_acc ?? null)))))))),
+                                                            ($moniepoint_acc ?? null))))))))),
 
                             'bank_name' => ($active_default == 'pointwave' && $pointwave_enabled && isset($user->pointwave_bank_name)) ? $user->pointwave_bank_name :
-                                (($active_default == 'xixapay' && $xixapay_enabled) ? 'PalmPay' :
+                                (($active_default == 'palmpay' && $palmpay_enabled && isset($user->palmpay)) ? 'PalmPay' :
+                                (($active_default == 'xixapay' && $xixapay_enabled && isset($user->kolomoni_mfb)) ? 'Kolomoni MFB' :
                                     (($active_default == 'monnify' && $monnify_enabled) ? 'Moniepoint' :
                                         (($active_default == 'wema' && $wema_enabled) ? 'Wema Bank' :
                                             // Fallback chain: Use real bank names, never provider names
@@ -211,7 +217,7 @@ class AuthController extends Controller
                                                 (isset($user->palmpay) ? 'PalmPay' :
                                                     (isset($user->kolomoni_mfb) ? 'Kolomoni MFB' :
                                                         (isset($user->paystack_account) ? 'Wema Bank' :
-                                                            ($moniepoint_acc ? 'Moniepoint' : null)))))))),
+                                                            ($moniepoint_acc ? 'Moniepoint' : null))))))))),
 
                             'paystack_account' => $user->paystack_account,
                             'paystack_bank' => $user->paystack_bank,
@@ -288,7 +294,6 @@ class AuthController extends Controller
                         // PointWave
                         $pointwave_enabled = $settings->pointwave_enabled ?? false;
                         $default_virtual_account = $settings->default_virtual_account ?? 'palmpay';
-                        $default_virtual_account = ($default_virtual_account == 'palmpay') ? 'xixapay' : $default_virtual_account; // Migration for name change if needed
                     } catch (\Exception $e) {
                         $monnify_enabled = true;
                         $wema_enabled = true;
@@ -322,7 +327,7 @@ class AuthController extends Controller
                     }
 
                     try {
-                        if ($xixapay_enabled && $user->palmpay == null)
+                        if ($xixapay_enabled && $user->kolomoni_mfb == null)
                             $this->xixapay_account($user->username);
                     } catch (\Exception $e) {
                         \Log::error("Account Xixapay: " . $e->getMessage());
@@ -344,8 +349,8 @@ class AuthController extends Controller
                     }
 
                     try {
-                        if ($palmpay_enabled && ($user->palmpay == null || $user->opay == null))
-                            $this->paymentpoint_account($user->username);
+                        if ($palmpay_enabled && $user->palmpay == null)
+                            $this->kobopoint_account($user->username);
                     } catch (\Exception $e) {
                         \Log::error("Account PaymentPoint: " . $e->getMessage());
                     }
@@ -670,7 +675,6 @@ class AuthController extends Controller
                             $palmpay_enabled = $settings->palmpay_enabled ?? true;
                             $pointwave_enabled = $settings->pointwave_enabled ?? false;
                             $default_virtual_account = $settings->default_virtual_account ?? 'palmpay';
-                            $default_virtual_account = ($default_virtual_account == 'palmpay') ? 'xixapay' : $default_virtual_account; // Migration for name change if needed
                         } catch (\Exception $e) {
                             $monnify_enabled = true;
                             $wema_enabled = true;
@@ -748,15 +752,16 @@ class AuthController extends Controller
                             'sterlen' => $moniepoint_acc,
                             'fed' => null,
                             'wema' => $wema_acc,
-                            'opay' => $xixapay_enabled ? $user->palmpay : null,
-                            'kolomoni_mfb' => $xixapay_enabled ? $user->kolomoni_mfb : null,
-                            'palmpay' => null,
+                            'opay' => $palmpay_enabled ? (!empty($user->palmpay) ? $user->palmpay : null) : null,
+                            'kolomoni_mfb' => $xixapay_enabled ? (!empty($user->kolomoni_mfb) ? $user->kolomoni_mfb : null) : null,
+                            'palmpay' => $palmpay_enabled ? (!empty($user->palmpay) ? $user->palmpay : null) : null,
                             'pointwave' => $pointwave_enabled ? $user->pointwave_account_number : null,
                             'pointwave_bank' => $pointwave_enabled ? $user->pointwave_bank_name : null,
 
                             // Smart Fallback: If default provider account is missing, fallback to next available
                             'account_number' => ($active_default == 'pointwave' && $pointwave_enabled && !empty($user->pointwave_account_number)) ? $user->pointwave_account_number :
-                                (($active_default == 'xixapay' && $xixapay_enabled && !empty($user->palmpay)) ? $user->palmpay :
+                                (($active_default == 'palmpay' && $palmpay_enabled && !empty($user->palmpay)) ? $user->palmpay :
+                                (($active_default == 'xixapay' && $xixapay_enabled && !empty($user->kolomoni_mfb)) ? $user->kolomoni_mfb :
                                     (($active_default == 'monnify' && $monnify_enabled && !empty($moniepoint_acc)) ? $moniepoint_acc :
                                         (($active_default == 'wema' && $wema_enabled && !empty($user->paystack_account)) ? $user->paystack_account :
                                             // Fallback chain: PointWave PalmPay -> Xixapay PalmPay -> Kolomoni -> Wema -> Moniepoint
@@ -764,11 +769,12 @@ class AuthController extends Controller
                                                 (!empty($user->palmpay) ? $user->palmpay :
                                                     (!empty($user->kolomoni_mfb) ? $user->kolomoni_mfb :
                                                         (!empty($user->paystack_account) ? $user->paystack_account :
-                                                            ($moniepoint_acc ?? null)))))))),
+                                                            ($moniepoint_acc ?? null))))))))),
 
             // Keep Paystack independent or link to another setting if needed
                             'bank_name' => ($active_default == 'pointwave' && $pointwave_enabled && !empty($user->pointwave_bank_name)) ? $user->pointwave_bank_name :
-                                (($active_default == 'xixapay' && $xixapay_enabled) ? 'PalmPay' :
+                                (($active_default == 'palmpay' && $palmpay_enabled && !empty($user->palmpay)) ? 'PalmPay' :
+                                (($active_default == 'xixapay' && $xixapay_enabled && !empty($user->kolomoni_mfb)) ? 'Kolomoni MFB' :
                                     (($active_default == 'monnify' && $monnify_enabled) ? 'Moniepoint' :
                                         (($active_default == 'wema' && $wema_enabled) ? 'Wema Bank' :
                                             // Fallback chain: Use real bank names, never provider names
@@ -776,7 +782,7 @@ class AuthController extends Controller
                                                 (!empty($user->palmpay) ? 'PalmPay' :
                                                     (!empty($user->kolomoni_mfb) ? 'Kolomoni MFB' :
                                                         (!empty($user->paystack_account) ? 'Wema Bank' :
-                                                            ($moniepoint_acc ? 'Moniepoint' : 'PalmPay')))))))),
+                                                            ($moniepoint_acc ? 'Moniepoint' : 'PalmPay'))))))))),
 
                             'paystack_account' => $user->paystack_account,
                             'paystack_bank' => $user->paystack_bank,
