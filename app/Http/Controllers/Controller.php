@@ -461,6 +461,110 @@ class Controller extends BaseController
         // DISABLED: As per user request to avoid slowdowns and duplicates
         return;
     }
+    public function kobopoint_account($username)
+    {
+        try {
+            $check_first = DB::table('user')->where('username', $username);
+
+            if ($check_first->count() == 1) {
+                $user = $check_first->get()[0];
+
+                // Cooldown check: Don't retry more than once every 10 minutes
+                $cacheKey = "kobopoint_sync_" . $user->id;
+                if (\Cache::has($cacheKey)) {
+                    return;
+                }
+
+                // If user already has a palmpay account, don't generate another one
+                if (!is_null($user->palmpay)) {
+                    return;
+                }
+
+                \Log::info("Kobopoint SYNC: Missing PalmPay account for $username.");
+
+                $kobopointService = new \App\Services\KobopointService();
+
+                // 1. Check or Create Customer
+                $customerId = $user->kobopoint_customer_id ?? null;
+
+                // 1. Check or Create Customer
+                $customerId = $user->kobopoint_customer_id ?? null;
+
+                $nameParts = explode(' ', $user->name, 2);
+                $firstName = $nameParts[0] ?: $username;
+                $lastName = isset($nameParts[1]) ? $nameParts[1] : $firstName;
+
+                $customerData = [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $user->email,
+                    'phone_number' => $user->phone,
+                ];
+
+                if (!empty($user->bvn)) {
+                    $customerData['bvn'] = $user->bvn;
+                }
+
+                if (!$customerId) {
+                    $customerResult = $kobopointService->createCustomer($customerData);
+
+                    if ($customerResult['status'] === true && isset($customerResult['data']['customer_id'])) {
+                        $customerId = $customerResult['data']['customer_id'];
+                        // Save customer_id to user table
+                        DB::table('user')->where('id', $user->id)->update([
+                            'kobopoint_customer_id' => $customerId
+                        ]);
+                    } else {
+                        \Log::error("Kobopoint: Failed to create customer for $username", [
+                            'response' => $customerResult
+                        ]);
+                        \Cache::put($cacheKey, 'failed', 10);
+                        return;
+                    }
+                } else {
+                    // Update existing customer as requested by user
+                    $kobopointService->updateCustomer($customerId, $customerData);
+                }
+
+                // 2. Create Virtual Account for the customer
+                // 033 is PalmPay bank code
+                if ($customerId) {
+                    $accountResult = $kobopointService->createVirtualAccount($customerId, $user->name, 'static', ['033']);
+                }
+
+                if ($accountResult['status'] === true && isset($accountResult['data']['virtual_accounts'])) {
+                        $virtualAccounts = $accountResult['data']['virtual_accounts'];
+                        $palmpayAccount = null;
+
+                        foreach ($virtualAccounts as $acc) {
+                            if ($acc['bank_code'] === '033' || stripos($acc['bank_name'], 'PalmPay') !== false) {
+                                $palmpayAccount = $acc['account_number'];
+                                break;
+                            }
+                        }
+
+                        if ($palmpayAccount) {
+                            $updateData = ['palmpay' => $palmpayAccount];
+
+                            if (!$customerId && isset($accountResult['data']['customer']['customer_id'])) {
+                                $updateData['kobopoint_customer_id'] = $accountResult['data']['customer']['customer_id'];
+                            }
+
+                            DB::table('user')->where('id', $user->id)->update($updateData);
+                            \Log::info("Kobopoint: Successfully generated PalmPay account $palmpayAccount for $username");
+                        } else {
+                            \Log::error("Kobopoint: No PalmPay account found in response for $username", ['response' => $accountResult]);
+                            \Cache::put($cacheKey, 'failed', 10);
+                        }
+                    } else {
+                        \Log::error("Kobopoint: Failed to create virtual account for $username", ['response' => $accountResult]);
+                        \Cache::put($cacheKey, 'failed', 10);
+                    }
+            }
+        } catch (\Exception $e) {
+            \Log::error("Kobopoint Sync Error for $username: " . $e->getMessage());
+        }
+    }
 
     public function pointwave_account($username)
     {
