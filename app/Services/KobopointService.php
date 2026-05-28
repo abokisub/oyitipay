@@ -287,8 +287,8 @@ class KobopointService
 
         return $this->safe(function () use ($bankCode, $accountNumber, $cacheKey) {
             $result = $this->parse($this->http()->post("{$this->baseUrl}/banks/verify", [
-                'bank'          => $bankCode,
-                'accountNumber' => $accountNumber,
+                'bank_code'      => $bankCode,
+                'account_number' => $accountNumber,
             ]));
             if ($result['status']) {
                 Cache::put($cacheKey, $result['data'], now()->addHours(24));
