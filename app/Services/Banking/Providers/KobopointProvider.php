@@ -84,6 +84,7 @@ class KobopointProvider implements BankingProviderInterface
                 'amount'         => (float) $details['amount'],
                 'bank_code'      => $details['bank_code'],
                 'account_number' => $details['account_number'],
+                'account_name'   => $details['account_name'] ?? 'Unknown Account',
                 'narration'      => $details['narration'] ?? 'Transfer',
             ];
 
