@@ -80,11 +80,11 @@ class KobopointProvider implements BankingProviderInterface
             }
 
             $payload = [
-                'businessId'    => $businessId,
-                'amount'        => (float) $details['amount'],
-                'bank'          => $details['bank_code'],
-                'accountNumber' => $details['account_number'],
-                'narration'     => $details['narration'] ?? 'Transfer',
+                'business_id'    => $businessId,
+                'amount'         => (float) $details['amount'],
+                'bank_code'      => $details['bank_code'],
+                'account_number' => $details['account_number'],
+                'narration'      => $details['narration'] ?? 'Transfer',
             ];
 
             Log::info("Kobopoint Transfer Initiate Payload:", $payload);
