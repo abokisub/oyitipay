@@ -82,6 +82,14 @@ class Auth extends Controller
                     $this->insert_stock($user->username);
                     $moniepoint_acc = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first()->account_number ?? null;
                     $user = DB::table('user')->where(['id' => $user->id])->first();
+                    
+                    // KOBOPOINT OVERRIDE for mobile app main payload
+                    $koboAcc = DB::table("pointwave_virtual_accounts")->where("user_id", $user->id)->first();
+                    if ($koboAcc) {
+                        $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
+                    }
+
                     $user_details = [
                         'id' => $user->id,
                         'username' => $user->username,
@@ -634,7 +642,15 @@ class Auth extends Controller
                         $this->insert_stock($user->username);
                         $moniepoint_acc = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first()->account_number ?? null;
                         $user = DB::table('user')->where(['id' => $user->id])->first();
-                        $user_details = [
+                        
+                    // KOBOPOINT OVERRIDE for mobile app main payload
+                    $koboAcc = DB::table("pointwave_virtual_accounts")->where("user_id", $user->id)->first();
+                    if ($koboAcc) {
+                        $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
+                    }
+
+                    $user_details = [
                             'id' => $user->id,
                             'username' => $user->username,
                             'name' => $user->name,
@@ -862,6 +878,14 @@ class Auth extends Controller
                     $this->insert_stock($user->username);
                     $moniepoint_acc = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first()->account_number ?? null;
                     $user = DB::table('user')->where(['id' => $user->id])->first();
+                    
+                    // KOBOPOINT OVERRIDE for mobile app main payload
+                    $koboAcc = DB::table("pointwave_virtual_accounts")->where("user_id", $user->id)->first();
+                    if ($koboAcc) {
+                        $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
+                    }
+
                     $user_details = [
                         'id' => $user->id,
                         'username' => $user->username,
@@ -1110,7 +1134,15 @@ class Auth extends Controller
                 $this->insert_stock($user->username);
                 $user = DB::table('user')->where(['id' => $user->id])->first();
                 $moniepoint_acc = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first()->account_number ?? null;
-                $user_details = [
+                
+                    // KOBOPOINT OVERRIDE for mobile app main payload
+                    $koboAcc = DB::table("pointwave_virtual_accounts")->where("user_id", $user->id)->first();
+                    if ($koboAcc) {
+                        $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
+                    }
+
+                    $user_details = [
                     'id' => $user->id,
                     'username' => $user->username,
                     'name' => $user->name,
@@ -2597,6 +2629,14 @@ class Auth extends Controller
 
                     $moniepoint_acc = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first()->account_number ?? null;
                     $user = DB::table('user')->where(['status' => 1, 'id' => $user->id])->first();
+                    
+                    // KOBOPOINT OVERRIDE for mobile app main payload
+                    $koboAcc = DB::table("pointwave_virtual_accounts")->where("user_id", $user->id)->first();
+                    if ($koboAcc) {
+                        $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
+                    }
+
                     $user_details = [
                         'username' => $user->username,
                         'name' => $user->name,
@@ -2801,6 +2841,14 @@ class Auth extends Controller
                         'pin' => $user->pin,
                     ];
                     MailController::send_mail($email_data, 'email.welcome');
+                    
+                    // KOBOPOINT OVERRIDE for mobile app main payload
+                    $koboAcc = DB::table("pointwave_virtual_accounts")->where("user_id", $user->id)->first();
+                    if ($koboAcc) {
+                        $user->palmpay = $koboAcc->account_number;
+                        $user->opay = $koboAcc->account_number;
+                    }
+
                     $user_details = [
                         'username' => $user->username,
                         'name' => $user->name,
