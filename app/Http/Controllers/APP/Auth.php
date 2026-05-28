@@ -3832,11 +3832,11 @@ class Auth extends Controller
                 
                 // Determine tier and limits based on ID type
                 if ($request->id_type === 'bvn') {
-                    $updateData['kyc_tier'] = 'tier2';
+                    $updateData['kyc_tier'] = 'tier_2';
                     $updateData['single_limit'] = 500000.00;
                     $updateData['daily_limit'] = 2000000.00;
                 } else {
-                    $updateData['kyc_tier'] = 'tier1';
+                    $updateData['kyc_tier'] = 'tier_1';
                     $updateData['single_limit'] = 50000.00;
                     $updateData['daily_limit'] = 200000.00;
                 }
