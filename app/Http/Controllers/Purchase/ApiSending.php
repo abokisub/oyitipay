@@ -57,79 +57,78 @@ class ApiSending extends Controller
 
     public static function HabukhanApi($data, $sending_data)
     {
-        // Detect if this is an electricity/bill call (endpoint contains /api/bill)
-        $is_bill = (strpos($data['endpoint'], '/api/bill') !== false);
-
-        $decoded_auth = base64_decode($data['accessToken']);
-        list($username, $password) = explode(':', $decoded_auth);
-        $login_url = $data['website_url'] . "/api/login/verify/user";
-
-        // Attempt with cached credentials first; retry once with fresh login on failure
-        $credentials = self::habukhanLogin($login_url, $username, $password);
-
-        if (!$credentials) {
-            return ['status' => 'fail', 'message' => 'Login failed'];
+        // Sanitize base URL
+        $baseUrl = rtrim(trim($data['website_url']), '/');
+        if (!preg_match("~^(?:f|ht)tps?://~i", $baseUrl)) {
+            $baseUrl = "https://" . $baseUrl;
         }
-
-        $api_key = $credentials['api_key'];
-
-        if (isset($sending_data['pin'])) {
-            unset($sending_data['pin']);
-        }
-        $unique_request_id = ($sending_data['request-id'] ?? 'TXN') . '_' . time() . '_' . uniqid();
-        $sending_data['request-id'] = $unique_request_id;
-
-        $headers = [
-            "Authorization: Token $api_key",
-            'Content-Type: application/json',
-            'Origin: https://oyitipay.com'
-        ];
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $data['endpoint']);
+        curl_setopt($ch, CURLOPT_URL, $baseUrl . "/api/user/");
         curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($sending_data));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $is_bill ? 60 : 30);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $dataapi  = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            [
+                "Authorization: Basic " . $data['accessToken'] . "",
+                "Accept: application/json"
+            ]
+        );
+        $json = curl_exec($ch);
+        
+        if ($json === false) {
+            \Log::error('HabukhanApi Auth Error: ' . curl_error($ch));
+        }
         curl_close($ch);
+        
+        $decode_habukhan = (json_decode($json, true));
+        if (!empty($decode_habukhan)) {
+            if (isset($decode_habukhan['AccessToken'])) {
+                $access_token = $decode_habukhan['AccessToken'];
+                
+                // Parse endpoint URL
+                $endpointUrl = rtrim(trim($data['endpoint']), '/');
+                if (!preg_match("~^(?:f|ht)tps?://~i", $endpointUrl)) {
+                    $endpointUrl = "https://" . $endpointUrl;
+                }
+                
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $endpointUrl);
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($sending_data));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                $headers = [
+                    "Authorization: Token $access_token",
+                    'Content-Type: application/json',
+                    "Accept: application/json"
+                ];
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                $dataapi = curl_exec($ch);
+                
+                if ($dataapi === false) {
+                    \Log::error('HabukhanApi Data Error: ' . curl_error($ch));
+                }
+                
+                $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                $res = json_decode($dataapi, true);
+                return self::checkGlobalLowBalance($res, $data['endpoint']);
 
-        $response = json_decode($dataapi, true);
-
-        // If the API returns 401/403, the cached token may have expired — clear it and retry once
-        if (in_array($httpcode, [401, 403])) {
-            $cacheKey = 'habukhan_token_' . md5($login_url . $username);
-            Cache::forget($cacheKey);
-
-            $credentials = self::habukhanLogin($login_url, $username, $password);
-            if (!$credentials) {
-                return ['status' => 'fail', 'message' => 'Re-authentication failed'];
+            } else {
+                \Log::warning('HabukhanApi Auth Failed: ', ['response' => $json]);
+                return ['status' => 'fail'];
             }
-
-            $api_key = $credentials['api_key'];
-            $headers[0] = "Authorization: Token $api_key";
-
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $data['endpoint']);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($sending_data));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, $is_bill ? 60 : 30);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-            $dataapi  = curl_exec($ch);
-            curl_close($ch);
-            $response = json_decode($dataapi, true);
+        } else {
+            \Log::warning('HabukhanApi Auth Returned Empty or Invalid JSON: ', ['raw' => $json]);
+            return ['status' => 'fail'];
         }
-
-        if ($is_bill && !empty($response) && isset($response['status']) && $response['status'] == 'success' && isset($response['data']['token'])) {
-            $response['token'] = $response['data']['token'];
-        }
-
-        return $response;
     }
 
     public static function AdexApi($data, $sending_data)
