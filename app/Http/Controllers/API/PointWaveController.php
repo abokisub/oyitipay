@@ -228,17 +228,16 @@ class PointWaveController extends Controller
                 $request->bank_code
             );
 
-            // BankingService returns ['status' => true/false, 'data' => ...]
-            if (!$result['status'] && !($result['success'] ?? false)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $result['message'] ?? $result['error'] ?? 'Failed to verify account',
-                ], 400);
-            }
-
+            // If BankingService->verifyAccount returns, it means it succeeded (failures throw Exceptions).
+            // It returns an array like ['account_name' => '...', 'account_number' => '...']
             return response()->json([
                 'success' => true,
-                'data' => $result['data'],
+                'data' => [
+                    'account_name' => $result['account_name'] ?? 'Unknown',
+                    'account_number' => $result['account_number'] ?? $request->account_number,
+                    'bank_code' => $request->bank_code,
+                    'bank_name' => $result['bank_name'] ?? 'Bank',
+                ],
                 'cached' => $result['cached'] ?? false,
             ]);
         } catch (\Exception $e) {
