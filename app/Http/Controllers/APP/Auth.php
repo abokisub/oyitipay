@@ -3739,11 +3739,13 @@ class Auth extends Controller
             ]);
 
             if ($validator->fails()) {
+                \Log::error("KYC: Validation failed for User " . ($user->id ?? 'unknown') . ": " . json_encode($validator->errors()->toArray()));
                 return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 400);
             }
 
             if ($request->id_type == 'nin') {
                 if ($user->nin) {
+                    \Log::warning("KYC: User {$user->id} already has a NIN verified ({$user->nin})");
                     return response()->json(['status' => 'error', 'message' => 'NIN is already verified and locked.'], 400);
                 }
 
