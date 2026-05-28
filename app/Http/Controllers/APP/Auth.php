@@ -3718,7 +3718,7 @@ class Auth extends Controller
 
     public function updateKyc(Request $request)
     {
-        \Log::info("Mobile App KYC Request", $request->all());
+        \Log::info("Mobile App KYC Request", array_merge($request->all(), ['auth_header_preview' => substr($request->header('Authorization') ?? '', 0, 20)]));
         $authHeader = $request->header('Authorization');
         if (strpos($authHeader, 'Token ') === 0) {
             $authHeader = substr($authHeader, 6);
@@ -3907,6 +3907,7 @@ class Auth extends Controller
                 'message' => strtoupper($request->id_type) . ' updated successfully'
             ]);
         }
+        \Log::error("KYC: User NOT FOUND from auth header. Token preview: " . substr($authHeader ?? '', 0, 20));
         return response()->json(['status' => 'error', 'message' => 'Unauthorised'], 403);
     }
     public function NotificationCount(Request $request)
