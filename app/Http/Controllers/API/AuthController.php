@@ -171,6 +171,12 @@ class AuthController extends Controller
 
                         $moniepoint_acc = optional(DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first())->account_number ?? null;
 
+                        // KOBOPOINT OVERRIDE for mobile app main payload
+                        $koboAcc = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->first();
+                        if ($koboAcc) {
+                            $user->palmpay = $koboAcc->account_number;
+                        }
+
                         $user_details = [
                             'username' => $user->username,
                             'name' => $user->name,
@@ -541,6 +547,12 @@ class AuthController extends Controller
 
                 $moniepoint_acc = optional(DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'MONIEPOINT'])->first())->account_number ?? null;
 
+                // KOBOPOINT OVERRIDE for mobile app main payload
+                $koboAcc = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->first();
+                if ($koboAcc) {
+                    $user->palmpay = $koboAcc->account_number;
+                }
+
                 $user_details = [
                     'username' => $user->username,
                     'name' => $user->name,
@@ -735,6 +747,12 @@ class AuthController extends Controller
                         $moniepoint_acc = $moniepoint_row ? $moniepoint_row->account_number : null;
                         $wema_row = DB::table('user_bank')->where(['username' => $user->username, 'bank' => 'WEMA BANK'])->first();
                         $wema_acc = $wema_row ? $wema_row->account_number : null;
+
+                        // KOBOPOINT OVERRIDE for mobile app main payload
+                        $koboAcc = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->first();
+                        if ($koboAcc) {
+                            $user->palmpay = $koboAcc->account_number;
+                        }
 
                         $user_details = [
                             'username' => $user->username,
