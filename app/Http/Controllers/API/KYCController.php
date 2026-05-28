@@ -300,7 +300,7 @@ class KYCController extends Controller
 
     /**
      * Get tier and limits based on ID type
-     * NIN = tier_1, BVN = tier_2
+     * NIN = tier1, BVN = tier_2
      */
     private function getTierDataForIdType($idType)
     {

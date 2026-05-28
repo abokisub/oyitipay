@@ -3836,7 +3836,7 @@ class Auth extends Controller
                     $updateData['single_limit'] = 500000.00;
                     $updateData['daily_limit'] = 2000000.00;
                 } else {
-                    $updateData['kyc_tier'] = 'tier_1';
+                    $updateData['kyc_tier'] = 'tier1';
                     $updateData['single_limit'] = 50000.00;
                     $updateData['daily_limit'] = 200000.00;
                 }
