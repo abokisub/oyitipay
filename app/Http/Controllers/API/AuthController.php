@@ -1426,8 +1426,8 @@ class AuthController extends Controller
             ];
         }
         
-        // Add PointWave accounts from point_wave_virtual_accounts table
-        $pwAccounts = DB::table('point_wave_virtual_accounts')->where('user_id', $user->id)->get();
+        // Add PointWave accounts from pointwave_virtual_accounts table
+        $pwAccounts = DB::table('pointwave_virtual_accounts')->where('user_id', $user->id)->get();
         foreach ($pwAccounts as $pwAcc) {
             if (!collect($accounts)->where('account_number', $pwAcc->account_number)->count()) {
                 $accounts[] = [
