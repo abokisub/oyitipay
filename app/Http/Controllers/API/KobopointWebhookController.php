@@ -18,68 +18,55 @@ class KobopointWebhookController extends Controller
     {
         $payload = $request->getContent();
 
-        $receivedSignature = $request->header('X-Webhook-Signature') 
-                          ?? $request->header('X-PointWave-Signature')
-                          ?? $request->header('X-Kobopoint-Signature')
-                          ?? $request->header('X-Signature');
-
-        $webhookSecret = config('kobopoint.secret_key', env('KOBOPOINT_SECRET_KEY'));
-        
         Log::info('Kobopoint webhook DEBUG', [
-            'signature_header' => $receivedSignature,
+            'ip'             => $request->ip(),
             'payload_length' => strlen($payload),
+            'headers'        => $request->headers->all(),
         ]);
 
-        if (!$receivedSignature) {
-            Log::warning('Kobopoint webhook missing signature');
-            return response()->json(['error' => 'Missing signature'], 401);
-        }
-
-        if (strpos($receivedSignature, 'sha256=') === 0) {
-            $receivedSignature = substr($receivedSignature, 7);
-        }
-
-        $expectedSignature = hash_hmac('sha256', $payload, $webhookSecret);
-
-        if (!hash_equals($expectedSignature, $receivedSignature)) {
-            Log::warning('Invalid Kobopoint webhook signature', [
-                'received' => $receivedSignature,
-                'expected' => $expectedSignature,
-            ]);
-            return response()->json(['error' => 'Invalid signature'], 401);
-        }
-        
-        Log::info('Kobopoint webhook signature verified successfully');
-
         $data = json_decode($payload, true);
-        
+
         if (!$data) {
-            Log::error('Invalid JSON payload from Kobopoint');
+            Log::error('Kobopoint webhook: Invalid JSON payload');
             return response()->json(['error' => 'Invalid JSON'], 400);
         }
 
-        $transactionId = $data['transaction_id'] ?? null;
-        $notificationStatus = $data['notification_status'] ?? 'successful';
+        // Kobopoint sends PalmPay-style webhooks:
+        // Transaction ID  = orderNo
+        // Account number  = virtualAccountNo
+        // Amount (kobo)   = orderAmount
+        // Status          = orderStatus (1 = success)
+        // Signature       = sign (inside payload body, URL-encoded)
+        $transactionId = $data['orderNo'] ?? ($data['transaction_id'] ?? null);
 
         if (!$transactionId) {
-            Log::error('Missing transaction_id in Kobopoint webhook');
+            Log::error('Kobopoint webhook: Missing orderNo/transaction_id', ['payload' => $data]);
             return response()->json(['error' => 'Missing transaction_id'], 400);
         }
 
+        Log::info('Kobopoint PalmPay Webhook Received', [
+            'ip'      => $request->ip(),
+            'orderNo' => $transactionId,
+            'payload' => $data,
+        ]);
+
+        // Idempotency check
         $exists = DB::table('webhook_events')->where('event_id', $transactionId)->exists();
-        
+
         if ($exists) {
             Log::info('Duplicate Kobopoint webhook event', ['event_id' => $transactionId]);
             return response()->json(['message' => 'Event already processed'], 200);
         }
 
+        $notificationStatus = ($data['orderStatus'] ?? 1) == 1 ? 'successful' : 'failed';
+
         DB::table('webhook_events')->insert([
-            'event_id' => $transactionId,
+            'event_id'   => $transactionId,
             'event_type' => $notificationStatus,
-            'payload' => $payload,
-            'processed' => false,
+            'payload'    => $payload,
+            'processed'  => false,
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
 
         dispatch(new ProcessKobopointWebhook($data, $transactionId));

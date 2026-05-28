@@ -36,15 +36,21 @@ class ProcessKobopointWebhook implements ShouldQueue
         ]);
 
         try {
+            // Kobopoint sends PalmPay-style webhooks with orderStatus (1 = success)
+            // Support both formats
+            $orderStatus = $this->data['orderStatus'] ?? null;
             $notificationStatus = $this->data['notification_status'] ?? 'success';
-            
-            // Treat everything as a successful deposit for now, 
-            // since Kobopoint's virtual account webhooks are only sent on successful funding
-            if (strtolower($notificationStatus) === 'successful' || strtolower($notificationStatus) === 'success') {
+
+            $isSuccess = ($orderStatus !== null)
+                ? intval($orderStatus) === 1
+                : in_array(strtolower($notificationStatus), ['successful', 'success']);
+
+            if ($isSuccess) {
                 $this->handleDeposit();
             } else {
-                Log::warning('Kobopoint webhook: Unhandled notification status', [
-                    'status' => $notificationStatus
+                Log::warning('Kobopoint webhook: Unhandled/failed status', [
+                    'orderStatus'        => $orderStatus,
+                    'notificationStatus' => $notificationStatus,
                 ]);
             }
         } catch (\Exception $e) {
@@ -66,10 +72,19 @@ class ProcessKobopointWebhook implements ShouldQueue
 
     private function handleDeposit()
     {
-        $transactionId = $this->data['transaction_id'];
-        $amount = floatval($this->data['amount_paid'] ?? 0);
-        $kobopointFee = floatval($this->data['settlement_fee'] ?? 0);
-        $accountNumber = $this->data['receiver']['account_number'] ?? ($this->data['receiver.account_number'] ?? null);
+        // Real Kobopoint PalmPay webhook field names:
+        // orderNo          = transaction ID
+        // virtualAccountNo = the account number that was funded
+        // orderAmount      = amount in KOBO (divide by 100 for Naira)
+        $transactionId = $this->data['orderNo'] ?? ($this->data['transaction_id'] ?? $this->transactionId);
+        $amountKobo    = floatval($this->data['orderAmount'] ?? ($this->data['amount_paid'] ?? 0));
+        $amount        = $amountKobo / 100; // convert kobo → naira
+        $kobopointFee  = floatval($this->data['settlement_fee'] ?? 0);
+
+        // Account number - support both formats
+        $accountNumber = $this->data['virtualAccountNo']
+            ?? ($this->data['receiver']['account_number']
+                ?? ($this->data['receiver.account_number'] ?? null));
 
         if (!$accountNumber) {
             Log::error('Kobopoint Webhook: Missing receiver account_number in payload', ['payload' => $this->data]);
