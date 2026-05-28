@@ -79,7 +79,7 @@ class PointWaveController extends Controller
 
             // Determine active provider
             $bankingService = app(\App\Services\Banking\BankingService::class);
-            $providerSlug = $bankingService->getPrimaryProvider();
+            $providerSlug = $bankingService->getActiveProvider()->getProviderSlug();
             
             $nameParts = explode(' ', $user->name ?? 'User Account', 2);
             $firstName = $nameParts[0];
