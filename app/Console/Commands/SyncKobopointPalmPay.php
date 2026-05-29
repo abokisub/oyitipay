@@ -38,12 +38,15 @@ class SyncKobopointPalmPay extends Command
 
         foreach ($virtualAccounts as $va) {
             $user = DB::table('user')->where('id', $va->user_id)->first();
-            if ($user && is_null($user->palmpay)) {
-                DB::table('user')->where('id', $user->id)->update([
-                    'palmpay' => $va->account_number
-                ]);
-                $this->info("✅ Linked PalmPay {$va->account_number} to user {$user->username} (User ID: {$user->id}) from virtual accounts table.");
-                $count++;
+            if ($user) {
+                // If it's already the exact same account number, skip printing it to avoid spam
+                if ($user->palmpay !== $va->account_number) {
+                    DB::table('user')->where('id', $user->id)->update([
+                        'palmpay' => $va->account_number
+                    ]);
+                    $this->info("✅ Updated PalmPay for user {$user->username} to {$va->account_number} (Replaced old account).");
+                    $count++;
+                }
             }
         }
 
