@@ -388,6 +388,7 @@ class AirtimeCash extends Controller
             'pin' => $request->transferPin, // API expects 'pin' for share and sell pin
             'sessionId' => $request->sessionId,
             'senderNumber' => $phone,
+            'receiverNumber' => $network->phone,
             'reference' => $reference
         ];
 
@@ -402,7 +403,9 @@ class AirtimeCash extends Controller
                 $msg = $data['details'][0]['message'] ?? $data['message'] ?? 'Airtime conversion failed';
                 
                 // Map provider errors to user-friendly messages
-                if (str_contains(strtolower($msg), 'pin') || str_contains(strtolower($msg), 'unauthorized') || str_contains(strtolower($msg), 'authentication failed')) {
+                if (str_contains(strtolower($msg), 'message belong to the receiver number')) {
+                    $msg = 'Autopilot rejected transfer. Possible incorrect PIN or sender account locked by MTN.';
+                } elseif (str_contains(strtolower($msg), 'pin') || str_contains(strtolower($msg), 'unauthorized') || str_contains(strtolower($msg), 'authentication failed')) {
                     $msg = 'Incorrect Share & Sell PIN. Please check and try again.';
                 } elseif (str_contains(strtolower($msg), 'insufficient')) {
                     $msg = 'Insufficient airtime balance on the provided number.';
@@ -438,7 +441,9 @@ class AirtimeCash extends Controller
         $msg = $response['data']['message'] ?? $response['message'] ?? 'Airtime conversion failed';
 
         // Map provider errors to user-friendly messages
-        if (str_contains(strtolower($msg), 'pin') || str_contains(strtolower($msg), 'unauthorized') || str_contains(strtolower($msg), 'authentication failed')) {
+        if (str_contains(strtolower($msg), 'message belong to the receiver number')) {
+            $msg = 'Autopilot rejected transfer. Possible incorrect PIN or sender account locked by MTN.';
+        } elseif (str_contains(strtolower($msg), 'pin') || str_contains(strtolower($msg), 'unauthorized') || str_contains(strtolower($msg), 'authentication failed')) {
             $msg = 'Incorrect Share & Sell PIN. Please check and try again.';
         } elseif (str_contains(strtolower($msg), 'insufficient')) {
             $msg = 'Insufficient airtime balance on the provided number.';
