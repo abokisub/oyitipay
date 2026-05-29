@@ -44,9 +44,12 @@ class GenerateKobopointAccounts extends Command
 
         foreach ($users as $user) {
             try {
-                // Check if user already has a Kobopoint account (customer_id starts with KBP_)
+                // Check if user already has a Kobopoint account (customer_id starts with CUST- or KBP_)
                 $hasKobopoint = PointWaveVirtualAccount::where('user_id', $user->id)
-                    ->where('customer_id', 'LIKE', 'KBP_%')
+                    ->where(function ($query) {
+                        $query->where('customer_id', 'LIKE', 'CUST-%')
+                              ->orWhere('customer_id', 'LIKE', 'KBP_%');
+                    })
                     ->exists();
 
                 if ($hasKobopoint) {
@@ -87,16 +90,20 @@ class GenerateKobopointAccounts extends Command
                     $bankAccount = $responseData['bankAccounts'][0] ?? [];
                     $customerId = $responseData['customer']['customer_id'] ?? ('KBP_' . $user->id);
 
-                    PointWaveVirtualAccount::create([
-                        'user_id' => $user->id,
-                        'customer_id' => $customerId,
-                        'account_number' => $bankAccount['accountNumber'] ?? null,
-                        'account_name' => $bankAccount['accountName'] ?? $user->name,
-                        'bank_name' => $bankAccount['bankName'] ?? 'PalmPay',
-                        'bank_code' => $bankAccount['bankCode'] ?? '100033',
-                        'status' => 'active',
-                        'external_reference' => $responseData['reference'] ?? null,
-                    ]);
+                    PointWaveVirtualAccount::updateOrCreate(
+                        [
+                            'account_number' => $bankAccount['accountNumber'] ?? null,
+                        ],
+                        [
+                            'user_id' => $user->id,
+                            'customer_id' => $customerId,
+                            'account_name' => $bankAccount['accountName'] ?? $user->name,
+                            'bank_name' => $bankAccount['bankName'] ?? 'PalmPay',
+                            'bank_code' => $bankAccount['bankCode'] ?? '100033',
+                            'status' => 'active',
+                            'external_reference' => $responseData['reference'] ?? null,
+                        ]
+                    );
 
                     $createdCount++;
                 } else {
