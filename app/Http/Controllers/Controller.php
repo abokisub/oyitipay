@@ -537,13 +537,13 @@ class Controller extends BaseController
                     $accountResult = $kobopointService->createVirtualAccount($customerId, $user->name, 'static', ['033']);
                 }
 
-                if ($accountResult['status'] === true && isset($accountResult['data']['virtual_accounts'])) {
-                        $virtualAccounts = $accountResult['data']['virtual_accounts'];
+                if ($accountResult['status'] === true && isset($accountResult['data']['bankAccounts'])) {
+                        $virtualAccounts = $accountResult['data']['bankAccounts'];
                         $palmpayAccount = null;
 
                         foreach ($virtualAccounts as $acc) {
-                            if ($acc['bank_code'] === '033' || stripos($acc['bank_name'], 'PalmPay') !== false) {
-                                $palmpayAccount = $acc['account_number'];
+                            if ($acc['bankCode'] === '033' || $acc['bankCode'] === '100033' || stripos($acc['bankName'], 'PalmPay') !== false) {
+                                $palmpayAccount = $acc['accountNumber'];
                                 break;
                             }
                         }
