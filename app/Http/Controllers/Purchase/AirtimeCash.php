@@ -241,8 +241,32 @@ class AirtimeCash extends Controller
         }
     }
 
+    private function authenticateA2C(Request $request)
+    {
+        $explode_url = explode(',', config('app.habukhan_app_key'));
+        if (config('app.habukhan_device_key') == $request->header('Authorization')) {
+            if (!$request->user_id) return null;
+            $verified_id = $this->verifyapptoken($request->user_id);
+            return DB::table('user')->where(['id' => $verified_id, 'status' => 1])->first();
+        } else if (!$request->headers->get('origin') || in_array($request->headers->get('origin'), $explode_url)) {
+            if (!$request->token) return null;
+            return DB::table('user')->where(['id' => $this->verifytoken($request->token), 'status' => 1])->first();
+        } else {
+            $d_token = $request->header('Authorization');
+            if (!$d_token) return null;
+            $accessToken = trim(str_replace(["Token ", "Bearer "], "", $d_token));
+            if (!$accessToken) return null;
+            return DB::table('user')->where(['apikey' => $accessToken, 'status' => 1])->first();
+        }
+    }
+
     public function A2C_SendOtp(Request $request)
     {
+        $user = $this->authenticateA2C($request);
+        if (!$user) {
+            return response()->json(['status' => 'fail', 'message' => 'Unauthorized Access'], 401);
+        }
+
         $validator = Validator::make($request->all(), [
             'network' => 'required',
             'sender_number' => 'required|numeric|digits:11',
@@ -286,6 +310,11 @@ class AirtimeCash extends Controller
 
     public function A2C_VerifyOtp(Request $request)
     {
+        $user = $this->authenticateA2C($request);
+        if (!$user) {
+            return response()->json(['status' => 'fail', 'message' => 'Unauthorized Access'], 401);
+        }
+
         $validator = Validator::make($request->all(), [
             'identifier' => 'required',
             'otp' => 'required|numeric',
@@ -319,9 +348,15 @@ class AirtimeCash extends Controller
 
     public function A2C_Execute(Request $request)
     {
+        $user = $this->authenticateA2C($request);
+        if (!$user) {
+            return response()->json(['status' => 'fail', 'message' => 'Unauthorized Access'], 401);
+        }
+
         $validator = Validator::make($request->all(), [
             'sessionId' => 'required',
             'transid' => 'required', // The app's reference for the conversion
+            'transferPin' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -334,6 +369,9 @@ class AirtimeCash extends Controller
         $cash = DB::table('cash')->where('transid', $request->transid)->first();
         if (!$cash) {
             return response()->json(['status' => 'fail', 'message' => 'Transaction not found'], 400);
+        }
+        if ($cash->username != $user->username) {
+            return response()->json(['status' => 'fail', 'message' => 'Unauthorized Transaction Owner'], 401);
         }
         $network = DB::table('network')->where('network', $cash->network)->first();
         if (!$network || $network->cash != 1) {
