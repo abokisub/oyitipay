@@ -3871,6 +3871,41 @@ class Auth extends Controller
                 }
 
                 \Log::info("KYC: {$providerName} verification SUCCESS for User {$user->id}");
+
+                // Name Matching Check
+                $apiFirstName = strtolower(trim($verification['data']['first_name'] ?? $verification['data']['firstName'] ?? ''));
+                $apiLastName = strtolower(trim($verification['data']['last_name'] ?? $verification['data']['lastName'] ?? ''));
+                $apiFullName = strtolower(trim($verification['data']['full_name'] ?? $verification['data']['fullName'] ?? ''));
+
+                if (!empty($apiFirstName) || !empty($apiLastName) || !empty($apiFullName)) {
+                    $userFirstName = strtolower($firstName);
+                    $userLastName = strtolower($lastName);
+                    
+                    $firstNameMatch = !empty($apiFirstName) && (str_contains($userFirstName, $apiFirstName) || str_contains($apiFirstName, $userFirstName) || str_contains($apiFullName, $userFirstName));
+                    $lastNameMatch = !empty($apiLastName) && (str_contains($userLastName, $apiLastName) || str_contains($apiLastName, $userLastName) || str_contains($apiFullName, $userLastName));
+                    
+                    if (!$firstNameMatch && !$lastNameMatch) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'KYC Failed: Your registered profile name does not match the name on this ' . strtoupper($request->id_type) . '.'
+                        ], 400);
+                    }
+                }
+                
+                // Handle Liveness Selfie Upload
+                if ($request->hasFile('liveness_selfie')) {
+                    $image = $request->file('liveness_selfie');
+                    $filename = 'selfie_' . $user->id . '_' . time() . '.' . $image->getClientOriginalExtension();
+                    $destinationPath = public_path('uploads/kyc');
+                    
+                    if (!file_exists($destinationPath)) {
+                        mkdir($destinationPath, 0777, true);
+                    }
+                    
+                    $image->move($destinationPath, $filename);
+                    $updateData['id_card_path'] = 'uploads/kyc/' . $filename;
+                }
+
                 
                 // Extract DOB from response if available (BVN verification returns actual DOB)
                 if ($request->id_type === 'bvn' && isset($verification['data']['date_of_birth'])) {
