@@ -427,7 +427,7 @@ class AirtimeCash extends Controller
                 'mes' => $send_message,
                 'title' => 'AIRTIME 2 CASH'
             ];
-            \ApiSending::ADMINEMAIL($mes_data);
+            ApiSending::ADMINEMAIL($mes_data);
             DB::table('request')->insert(['username' => $cash->username, 'message' => $send_message, 'date' => $this->system_date(), 'transid' => $request->transid, 'status' => 0, 'title' => 'AIRTIME 2 CASH']);
 
             return response()->json([
