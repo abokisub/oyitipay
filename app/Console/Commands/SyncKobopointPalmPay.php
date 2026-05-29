@@ -27,49 +27,57 @@ class SyncKobopointPalmPay extends Command
      */
     public function handle(KobopointService $kobopointService)
     {
-        $users = DB::table('user')
+        $this->info("Checking for users who have a PalmPay virtual account but it's not mapped to user.palmpay...");
+
+        // Get virtual accounts from pointwave_virtual_accounts that are PalmPay
+        $virtualAccounts = DB::table('pointwave_virtual_accounts')
+            ->where('bank_name', 'LIKE', '%PalmPay%')
+            ->get();
+
+        $count = 0;
+
+        foreach ($virtualAccounts as $va) {
+            $user = DB::table('user')->where('id', $va->user_id)->first();
+            if ($user && is_null($user->palmpay)) {
+                DB::table('user')->where('id', $user->id)->update([
+                    'palmpay' => $va->account_number
+                ]);
+                $this->info("✅ Linked PalmPay {$va->account_number} to user {$user->username} (User ID: {$user->id}) from virtual accounts table.");
+                $count++;
+            }
+        }
+
+        if ($count > 0) {
+            $this->info("Successfully synced $count missing PalmPay accounts from the local database!");
+        } else {
+            $this->info("All database users are already synced up.");
+        }
+
+        // Now, for any remaining organic users who have kobopoint_customer_id but NO virtual account and NO palmpay
+        $remainingUsers = DB::table('user')
             ->whereNotNull('kobopoint_customer_id')
             ->whereNull('palmpay')
             ->get();
 
-        if ($users->isEmpty()) {
-            $this->info("No users found with missing PalmPay accounts.");
-            return;
-        }
-
-        $this->info("Found " . $users->count() . " users missing PalmPay accounts. Starting sync...");
-
-        foreach ($users as $user) {
-            $this->info("Syncing user ID: {$user->id} ({$user->username}) - Customer ID: {$user->kobopoint_customer_id}");
-
-            // Call createVirtualAccount on the existing customer.
-            // Kobopoint will either return the existing one or create it.
-            $accountResult = $kobopointService->createVirtualAccount($user->kobopoint_customer_id, $user->name, 'static', ['033']);
-
-            if ($accountResult['status'] === true && isset($accountResult['data']['bankAccounts'])) {
-                $virtualAccounts = $accountResult['data']['bankAccounts'];
-                $palmpayAccount = null;
-
-                foreach ($virtualAccounts as $acc) {
-                    if ($acc['bankCode'] === '033' || $acc['bankCode'] === '100033' || stripos($acc['bankName'], 'PalmPay') !== false) {
-                        $palmpayAccount = $acc['accountNumber'];
-                        break;
+        if ($remainingUsers->isNotEmpty()) {
+            $this->info("Fetching from API for " . $remainingUsers->count() . " remaining users...");
+            foreach ($remainingUsers as $user) {
+                $accountResult = $kobopointService->createVirtualAccount($user->kobopoint_customer_id, $user->name, 'static', ['033']);
+                if ($accountResult['status'] === true && isset($accountResult['data']['bankAccounts'])) {
+                    $palmpayAccount = null;
+                    foreach ($accountResult['data']['bankAccounts'] as $acc) {
+                        if ($acc['bankCode'] === '033' || $acc['bankCode'] === '100033' || stripos($acc['bankName'], 'PalmPay') !== false) {
+                            $palmpayAccount = $acc['accountNumber'];
+                            break;
+                        }
+                    }
+                    if ($palmpayAccount) {
+                        DB::table('user')->where('id', $user->id)->update(['palmpay' => $palmpayAccount]);
+                        $this->info("✅ API Linked PalmPay $palmpayAccount to user {$user->username}");
                     }
                 }
-
-                if ($palmpayAccount) {
-                    DB::table('user')->where('id', $user->id)->update(['palmpay' => $palmpayAccount]);
-                    $this->info("✅ Successfully linked PalmPay $palmpayAccount to user {$user->username}");
-                } else {
-                    $this->error("❌ No PalmPay account found in response for {$user->username}");
-                }
-            } else {
-                $this->error("❌ Failed to fetch virtual accounts for {$user->username}.");
-                $this->error("Response: " . json_encode($accountResult));
+                sleep(1);
             }
-            
-            // Add a small delay to avoid hitting rate limits
-            sleep(1);
         }
 
         $this->info("Sync complete!");
