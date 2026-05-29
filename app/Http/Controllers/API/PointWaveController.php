@@ -158,6 +158,13 @@ class PointWaveController extends Controller
                     'external_reference' => $responseData['reference'] ?? null,
                 ]);
 
+                // Also update the old palmpay slot in the user table to ensure backward compatibility
+                if (!empty($bankAccount['accountNumber'])) {
+                    DB::table('user')->where('id', $user->id)->update([
+                        'palmpay' => $bankAccount['accountNumber']
+                    ]);
+                }
+
             } else {
                 // POINTWAVE LEGACY LOGIC
                 // Step 1: Create customer in PointWave
@@ -226,6 +233,13 @@ class PointWaveController extends Controller
                     'status' => 'active',
                     'external_reference' => $responseData['reference'] ?? null,
                 ]);
+
+                // Also update the old palmpay slot in the user table to ensure backward compatibility
+                if (!empty($responseData['account_number'])) {
+                    DB::table('user')->where('id', $user->id)->update([
+                        'palmpay' => $responseData['account_number']
+                    ]);
+                }
             }
 
             Log::channel('pointwave')->info('Virtual account created', [
