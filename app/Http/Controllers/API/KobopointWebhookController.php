@@ -31,6 +31,13 @@ class KobopointWebhookController extends Controller
             return response()->json(['error' => 'Invalid JSON'], 400);
         }
 
+        // Check if this is a Habukhan Data Purchase Webhook
+        if (isset($data['status']) && isset($data['request-id']) && isset($data['response'])) {
+            Log::info('Routing payload to Habukhan Data Webhook', ['request_id' => $data['request-id']]);
+            $webhookController = app(\App\Http\Controllers\API\WebhookController::class);
+            return $webhookController->HabukhanWebhook();
+        }
+
         // Kobopoint sends webhooks with a nested 'data' object
         // e.g., data.transaction_id, data.status
         $transactionId = $data['data']['transaction_id'] ?? ($data['orderNo'] ?? ($data['transaction_id'] ?? null));
