@@ -422,17 +422,45 @@ class AirtimeCash extends Controller
                 ], 400);
             }
 
-            $send_message = $cash->username . " want to convert " . $cash->network . " ₦" . number_format($cash->amount, 2) . " to cash. payment method is (" . strtoupper($cash->payment_type) . "), Amount to Be Credited is ₦" . number_format($cash->amount_credit, 2) . " Airtime sent from " . $cash->sender_number . " Reference is => " . $request->transid;
+            $user_data = DB::table('user')->where('username', $cash->username)->first();
+            
+            if ($user_data) {
+                if (strtolower($cash->payment_type) == 'wallet') {
+                    $newBal = $user_data->bal + $cash->amount_credit;
+                    DB::table('user')->where('username', $user_data->username)->update(['bal' => $newBal]);
+                    
+                    DB::table('cash')->where('transid', $cash->transid)->update([
+                        'plan_status' => 1,
+                        'oldbal' => $user_data->bal,
+                        'newbal' => $newBal
+                    ]);
+                    
+                    DB::table('message')->where('transid', $cash->transid)->update([
+                        'plan_status' => 1,
+                        'message' => "Airtime 2 Cash Success (Auto)",
+                        'oldbal' => $user_data->bal,
+                        'newbal' => $newBal
+                    ]);
+                } else {
+                    DB::table('cash')->where('transid', $cash->transid)->update(['plan_status' => 1]);
+                    DB::table('message')->where('transid', $cash->transid)->update([
+                        'plan_status' => 1,
+                        'message' => "Airtime 2 Cash Success (Auto Bank/Other)"
+                    ]);
+                }
+            }
+
+            $send_message = $cash->username . " successfully converted " . $cash->network . " ₦" . number_format($cash->amount, 2) . " to cash. Payment method is (" . strtoupper($cash->payment_type) . "), Amount Credited is ₦" . number_format($cash->amount_credit, 2) . " Airtime sent from " . $cash->sender_number . " Reference is => " . $request->transid;
             $mes_data = [
                 'mes' => $send_message,
-                'title' => 'AIRTIME 2 CASH'
+                'title' => 'AIRTIME 2 CASH SUCCESS'
             ];
             ApiSending::ADMINEMAIL($mes_data);
-            DB::table('request')->insert(['username' => $cash->username, 'message' => $send_message, 'date' => $this->system_date(), 'transid' => $request->transid, 'status' => 0, 'title' => 'AIRTIME 2 CASH']);
+            DB::table('request')->insert(['username' => $cash->username, 'message' => $send_message, 'date' => $this->system_date(), 'transid' => $request->transid, 'status' => 1, 'title' => 'AIRTIME 2 CASH SUCCESS']);
 
             return response()->json([
                 'status' => 'success',
-                'message' => $response['data']['message'] ?? 'Airtime conversion initiated successfully'
+                'message' => $response['data']['message'] ?? 'Airtime conversion successful and your wallet has been credited.'
             ]);
         }
 
