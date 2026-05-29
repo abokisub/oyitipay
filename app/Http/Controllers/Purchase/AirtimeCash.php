@@ -30,51 +30,24 @@ class AirtimeCash extends Controller
             $check = DB::table('user')->where(['id' => $verified_id, 'status' => 1]);
             if ($check->count() == 1) {
                 $d_token = $check->first();
-                if (trim($d_token->pin) == trim($request->pin)) {
-                    $accessToken = $d_token->apikey;
-                } else {
-                    return response()->json([
-                        'status' => 'fail',
-                        'message' => 'Invalid Transaction Pin'
-                    ])->setStatusCode(403);
-                }
+                // Bypass system pin check for Airtime to Cash, because $request->pin is the network share & sell pin
+                $accessToken = $d_token->apikey;
             } else {
                 $accessToken = 'null';
             }
         } else if (!$request->headers->get('origin') || in_array($request->headers->get('origin'), $explode_url)) {
             $system = config('app.name');
 
-            if ($this->core()->allow_pin == 1) {
-                // transaction pin required
-                $check = DB::table('user')->where(['id' => $this->verifytoken($request->token)]);
-                if ($check->count() == 1) {
-                    $det = $check->first();
-                    if (trim($det->pin) == trim($request->pin)) {
-                        $accessToken = $det->apikey;
-                    } else {
-                        return response()->json([
-                            'status' => 'fail',
-                            'message' => 'Invalid Transaction Pin'
-                        ])->setStatusCode(403);
-                    }
-                } else {
-                    return response()->json([
-                        'status' => 'fail',
-                        'message' => 'Invalid Transaction Pin'
-                    ])->setStatusCode(403);
-                }
+            // Bypass system pin check for Airtime to Cash, because $request->pin is the network share & sell pin
+            $check = DB::table('user')->where(['id' => $this->verifytoken($request->token)]);
+            if ($check->count() == 1) {
+                $det = $check->first();
+                $accessToken = $det->apikey;
             } else {
-                // transaction pin not required
-                $check = DB::table('user')->where(['id' => $this->verifytoken($request->token)]);
-                if ($check->count() == 1) {
-                    $det = $check->first();
-                    $accessToken = $det->apikey;
-                } else {
-                    return response()->json([
-                        'status' => 'fail',
-                        'message' => 'An Error Occur'
-                    ])->setStatusCode(403);
-                }
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => 'An Error Occur'
+                ])->setStatusCode(403);
             }
         } else {
             $system = "API";

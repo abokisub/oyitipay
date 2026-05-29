@@ -83,7 +83,18 @@ class BankingService
                     $pwCode = $this->resolveBankCode($bankCode, 'pointwave');
                     return $pwProvider->verifyAccount($accountNumber, $pwCode);
                 } catch (\Exception $fallbackE) {
-                    throw $fallbackE;
+                    // Don't throw yet, try Paystack next
+                }
+            }
+
+            // Ultimate Fallback to Paystack if the above failed
+            if ($providerSlug !== 'paystack') {
+                try {
+                    $psProvider = $this->resolveProvider('paystack');
+                    $psCode = $this->resolveBankCode($bankCode, 'paystack');
+                    return $psProvider->verifyAccount($accountNumber, $psCode);
+                } catch (\Exception $psFallbackE) {
+                    throw $e; // Throw original error
                 }
             }
 
