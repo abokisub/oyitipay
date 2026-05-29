@@ -3843,9 +3843,11 @@ class Auth extends Controller
                 \Log::info("KYC: {$providerName} verification SUCCESS for User {$user->id}");
 
                 // Name Matching Check
-                $apiFirstName = strtolower(trim($verification['data']['first_name'] ?? $verification['data']['firstName'] ?? ''));
-                $apiLastName = strtolower(trim($verification['data']['last_name'] ?? $verification['data']['lastName'] ?? ''));
-                $apiFullName = strtolower(trim($verification['data']['full_name'] ?? $verification['data']['fullName'] ?? ''));
+                // NIN data is often nested inside an inner 'data' array and uses different keys
+                $innerData = $verification['data']['data'] ?? $verification['data'] ?? [];
+                $apiFirstName = strtolower(trim($verification['data']['first_name'] ?? $verification['data']['firstName'] ?? $innerData['firstName'] ?? $innerData['firstname'] ?? $innerData['first_name'] ?? ''));
+                $apiLastName = strtolower(trim($verification['data']['last_name'] ?? $verification['data']['lastName'] ?? $innerData['surname'] ?? $innerData['last_name'] ?? ''));
+                $apiFullName = strtolower(trim($verification['data']['full_name'] ?? $verification['data']['fullName'] ?? $innerData['fullName'] ?? $innerData['fullname'] ?? ''));
 
                 if (!empty($apiFirstName) || !empty($apiLastName) || !empty($apiFullName)) {
                     $userFirstName = strtolower($firstName);
