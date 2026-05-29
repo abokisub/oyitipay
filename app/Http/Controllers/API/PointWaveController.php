@@ -32,7 +32,8 @@ class PointWaveController extends Controller
         try {
             $user = $request->user();
             
-            $virtualAccount = PointWaveVirtualAccount::where('user_id', $user->id)->first();
+            // Get the newest virtual account so the mobile app shows the newly generated Kobopoint account
+            $virtualAccount = PointWaveVirtualAccount::where('user_id', $user->id)->latest('id')->first();
             
             if (!$virtualAccount) {
                 return response()->json([
@@ -48,12 +49,12 @@ class PointWaveController extends Controller
         } catch (\Exception $e) {
             Log::channel('pointwave')->error('Get virtual account error', [
                 'user_id' => $request->user()->id,
-                'error' => $e->getMessage(),
+                'error' => $e->getMessage()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve virtual account',
+                'message' => 'Failed to fetch virtual account',
             ], 500);
         }
     }
@@ -68,13 +69,30 @@ class PointWaveController extends Controller
             $user = $request->user();
             
             // Check if user already has a virtual account
-            $existingAccount = PointWaveVirtualAccount::where('user_id', $user->id)->first();
-            if ($existingAccount) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Virtual account already exists',
-                    'data' => $existingAccount,
-                ]);
+            $existingAccounts = PointWaveVirtualAccount::where('user_id', $user->id)->get();
+            $bankingService = app(\App\Services\Banking\BankingService::class);
+            $providerSlug = $bankingService->getActiveProvider()->getProviderSlug();
+            
+            // Prevent duplicate Kobopoint accounts if active provider is Kobopoint
+            if ($providerSlug === 'kobopoint') {
+                $hasKobopoint = $existingAccounts->contains(function ($account) {
+                    return str_starts_with($account->customer_id ?? '', 'KBP_');
+                });
+                if ($hasKobopoint) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Virtual account already exists',
+                        'data' => $existingAccounts->last(),
+                    ]);
+                }
+            } else {
+                if ($existingAccounts->isNotEmpty()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Virtual account already exists',
+                        'data' => $existingAccounts->last(),
+                    ]);
+                }
             }
 
             // Determine active provider
