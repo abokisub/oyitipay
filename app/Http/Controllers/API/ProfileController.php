@@ -46,6 +46,13 @@ class ProfileController extends Controller
             // Calculate daily usage
             $dailyUsed = $this->calculateDailyUsage($user->username);
 
+            // Account age check (for new-user risk limits)
+            $accountDate = Carbon::parse($user->date ?? Carbon::now());
+            $daysSinceRegistration = $accountDate->diffInDays(Carbon::now());
+            $isNewAccount = $daysSinceRegistration < 7;
+            $effectiveDailyLimit = $isNewAccount ? min(10000, $dailyLimit) : $dailyLimit;
+            $daysUntilFull = $isNewAccount ? max(0, 7 - $daysSinceRegistration) : 0;
+
             // Get next tier limits
             $nextTier = $tier < 2 ? $tier + 1 : null;
             $nextTierLimits = $nextTier ? $this->getTierLimits($nextTier) : null;
@@ -56,15 +63,19 @@ class ProfileController extends Controller
                     'tier' => $tier,
                     'tier_name' => $this->getTierName($tier),
                     'single_limit' => $singleLimit,
-                    'daily_limit' => $dailyLimit,
+                    'daily_limit' => $effectiveDailyLimit,
+                    'daily_limit_full' => $dailyLimit,
                     'daily_used' => $dailyUsed,
-                    'daily_remaining' => max(0, $dailyLimit - $dailyUsed),
-                    'usage_percentage' => $dailyLimit > 0 ? min(100, round(($dailyUsed / $dailyLimit) * 100, 2)) : 0,
+                    'daily_remaining' => max(0, $effectiveDailyLimit - $dailyUsed),
+                    'usage_percentage' => $effectiveDailyLimit > 0 ? min(100, round(($dailyUsed / $effectiveDailyLimit) * 100, 2)) : 0,
                     'next_tier_single' => $nextTierLimits ? $nextTierLimits['single'] : null,
                     'next_tier_daily' => $nextTierLimits ? $nextTierLimits['daily'] : null,
                     'kyc_status' => $user->kyc_status ?? 'pending',
                     'can_upgrade' => $tier < 2,
                     'upgrade_message' => $this->getUpgradeMessage($tier, $user->kyc_status),
+                    'is_new_account' => $isNewAccount,
+                    'days_since_registration' => $daysSinceRegistration,
+                    'days_until_full_limit' => $daysUntilFull,
                     'theme' => $this->getUserTheme($user->id)
                 ]
             ]);
