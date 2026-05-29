@@ -37,13 +37,20 @@ class ProcessKobopointWebhook implements ShouldQueue
 
         try {
             // Kobopoint sends PalmPay-style webhooks with orderStatus (1 = success)
-            // Support both formats
-            $orderStatus = $this->data['orderStatus'] ?? null;
+            // Or new API structure with data.status ('success')
+            $orderStatus = $this->data['data']['status'] ?? ($this->data['orderStatus'] ?? null);
             $notificationStatus = $this->data['notification_status'] ?? 'success';
 
-            $isSuccess = ($orderStatus !== null)
-                ? intval($orderStatus) === 1
-                : in_array(strtolower($notificationStatus), ['successful', 'success']);
+            $isSuccess = false;
+            if ($orderStatus !== null) {
+                if (is_numeric($orderStatus)) {
+                    $isSuccess = intval($orderStatus) === 1;
+                } else {
+                    $isSuccess = strtolower($orderStatus) === 'success' || strtolower($orderStatus) === 'successful';
+                }
+            } else {
+                $isSuccess = in_array(strtolower($notificationStatus), ['successful', 'success']);
+            }
 
             if ($isSuccess) {
                 $this->handleDeposit();
@@ -72,32 +79,36 @@ class ProcessKobopointWebhook implements ShouldQueue
 
     private function handleDeposit()
     {
-        // Real Kobopoint PalmPay webhook field names:
-        // orderNo          = transaction ID
-        // virtualAccountNo = the account number that was funded
-        // orderAmount      = amount in KOBO (divide by 100 for Naira)
-        $transactionId = $this->data['orderNo'] ?? ($this->data['transaction_id'] ?? $this->transactionId);
-        $amountKobo    = floatval($this->data['orderAmount'] ?? ($this->data['amount_paid'] ?? 0));
-        $amount        = $amountKobo / 100; // convert kobo → naira
-        $kobopointFee  = floatval($this->data['settlement_fee'] ?? 0);
+        // Kobopoint webhook field names:
+        $transactionId = $this->data['data']['transaction_id'] ?? ($this->data['orderNo'] ?? ($this->data['transaction_id'] ?? $this->transactionId));
+        
+        $amountKobo = floatval($this->data['orderAmount'] ?? ($this->data['amount_paid'] ?? 0));
+        $amount     = floatval($this->data['data']['amount'] ?? ($amountKobo / 100));
+        $kobopointFee = floatval($this->data['data']['fee'] ?? ($this->data['settlement_fee'] ?? 0));
 
-        // Account number - support both formats
-        $accountNumber = $this->data['virtualAccountNo']
-            ?? ($this->data['receiver']['account_number']
-                ?? ($this->data['receiver.account_number'] ?? null));
+        // Account number could be in different places depending on payload format
+        $accountNumberField = $this->data['data']['customer']['account_number'] ?? ($this->data['data']['account_number'] ?? ($this->data['virtualAccountNo'] ?? ($this->data['receiver']['account_number'] ?? null)));
 
-        if (!$accountNumber) {
+        if (!$accountNumberField) {
             Log::error('Kobopoint Webhook: Missing receiver account_number in payload', ['payload' => $this->data]);
             throw new \Exception('Account number not found in webhook data');
         }
 
-        $virtualAccount = PointWaveVirtualAccount::where('account_number', $accountNumber)->first();
+        $virtualAccount = null;
 
-        if (!$virtualAccount) {
-            Log::error('Kobopoint Webhook: Virtual account not found in database', ['account_number' => $accountNumber]);
-            throw new \Exception('Virtual account not found: ' . $accountNumber);
+        if (is_numeric($accountNumberField)) {
+            $virtualAccount = PointWaveVirtualAccount::where('account_number', $accountNumberField)->first();
+        } else {
+            // In some cases, the payload contains the account name instead of the account number
+            $virtualAccount = PointWaveVirtualAccount::where('account_name', 'LIKE', '%' . $accountNumberField . '%')->first();
         }
 
+        if (!$virtualAccount) {
+            Log::error('Kobopoint Webhook: Virtual account not found in database', ['account_number_field' => $accountNumberField]);
+            throw new \Exception('Virtual account not found: ' . $accountNumberField);
+        }
+
+        $accountNumber = $virtualAccount->account_number;
         $user = $virtualAccount->user;
 
         if (!$user) {

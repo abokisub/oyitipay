@@ -31,23 +31,19 @@ class KobopointWebhookController extends Controller
             return response()->json(['error' => 'Invalid JSON'], 400);
         }
 
-        // Kobopoint sends PalmPay-style webhooks:
-        // Transaction ID  = orderNo
-        // Account number  = virtualAccountNo
-        // Amount (kobo)   = orderAmount
-        // Status          = orderStatus (1 = success)
-        // Signature       = sign (inside payload body, URL-encoded)
-        $transactionId = $data['orderNo'] ?? ($data['transaction_id'] ?? null);
+        // Kobopoint sends webhooks with a nested 'data' object
+        // e.g., data.transaction_id, data.status
+        $transactionId = $data['data']['transaction_id'] ?? ($data['orderNo'] ?? ($data['transaction_id'] ?? null));
 
         if (!$transactionId) {
-            Log::error('Kobopoint webhook: Missing orderNo/transaction_id', ['payload' => $data]);
+            Log::error('Kobopoint webhook: Missing transaction_id', ['payload' => $data]);
             return response()->json(['error' => 'Missing transaction_id'], 400);
         }
 
-        Log::info('Kobopoint PalmPay Webhook Received', [
-            'ip'      => $request->ip(),
-            'orderNo' => $transactionId,
-            'payload' => $data,
+        Log::info('Kobopoint Webhook Received', [
+            'ip'             => $request->ip(),
+            'transaction_id' => $transactionId,
+            'payload'        => $data,
         ]);
 
         // Idempotency check
@@ -58,7 +54,7 @@ class KobopointWebhookController extends Controller
             return response()->json(['message' => 'Event already processed'], 200);
         }
 
-        $notificationStatus = ($data['orderStatus'] ?? 1) == 1 ? 'successful' : 'failed';
+        $notificationStatus = $data['data']['status'] ?? ($data['status'] ?? 'successful');
 
         DB::table('webhook_events')->insert([
             'event_id'   => $transactionId,
