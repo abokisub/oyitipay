@@ -82,7 +82,7 @@ class GenerateKobopointAccounts extends Command
                 // Bank code 100033 is PalmPay
                 $accountResult = $kobopointService->createVirtualAccount($payload, $user->name, 'static', ['100033']);
 
-                if (isset($accountResult['success']) && $accountResult['success']) {
+                if (isset($accountResult['status']) && $accountResult['status']) {
                     $responseData = $accountResult['data'];
                     $bankAccount = $responseData['bankAccounts'][0] ?? [];
                     $customerId = $responseData['customer']['customer_id'] ?? ('KBP_' . $user->id);
