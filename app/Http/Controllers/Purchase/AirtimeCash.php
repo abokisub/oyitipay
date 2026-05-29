@@ -168,13 +168,7 @@ class AirtimeCash extends Controller
                                                 ];
                                                 if ($this->inserting_data('message', $trans_history) and $this->inserting_data('cash', $trans_cash)) {
 
-                                                    $send_message = $user->username . " want to convert " . $request->network . " ₦" . number_format($request->amount, 2) . " to cash. payment method is (" . strtoupper($request->payment_type) . "), Amount to Be Credited is ₦" . number_format($credit, 2) . " Airtime sent from " . $request->sender_number . " Reference is => " . $transid;
-                                                    $mes_data = [
-                                                        'mes' => $send_message,
-                                                        'title' => 'AIRTIME 2 CASH'
-                                                    ];
-                                                    ApiSending::ADMINEMAIL($mes_data);
-                                                    DB::table('request')->insert(['username' => $user->username, 'message' => $send_message, 'date' => $this->system_date(), 'transid' => $transid, 'status' => 0, 'title' => 'AIRTIME 2 CASH']);
+                                                    // Admin email moved to A2C_Execute
                                                     return response()->json([
                                                         'status' => 'success',
                                                         'message' => 'Transaction On Process',
@@ -386,6 +380,14 @@ class AirtimeCash extends Controller
                     'message' => $msg
                 ], 400);
             }
+
+            $send_message = $cash->username . " want to convert " . $cash->network . " ₦" . number_format($cash->amount, 2) . " to cash. payment method is (" . strtoupper($cash->payment_type) . "), Amount to Be Credited is ₦" . number_format($cash->amount_credit, 2) . " Airtime sent from " . $cash->sender_number . " Reference is => " . $request->transid;
+            $mes_data = [
+                'mes' => $send_message,
+                'title' => 'AIRTIME 2 CASH'
+            ];
+            \ApiSending::ADMINEMAIL($mes_data);
+            DB::table('request')->insert(['username' => $cash->username, 'message' => $send_message, 'date' => $this->system_date(), 'transid' => $request->transid, 'status' => 0, 'title' => 'AIRTIME 2 CASH']);
 
             return response()->json([
                 'status' => 'success',
