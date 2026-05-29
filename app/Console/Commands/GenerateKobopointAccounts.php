@@ -55,11 +55,28 @@ class GenerateKobopointAccounts extends Command
                     continue;
                 }
 
+                // Parse name into first and last
+                $nameParts = explode(' ', $user->name ?? 'User Account', 2);
+                $firstName = $nameParts[0];
+                $lastName = $nameParts[1] ?? $nameParts[0];
+                
+                // Format phone number
+                $phoneNumber = $user->phone ?? '08000000000';
+                if (str_starts_with($phoneNumber, '+234')) {
+                    $phoneNumber = '0' . substr($phoneNumber, 4);
+                } elseif (str_starts_with($phoneNumber, '234')) {
+                    $phoneNumber = '0' . substr($phoneNumber, 3);
+                }
+
                 // If not, create a new Kobopoint virtual account
                 $payload = [
+                    'email' => $user->email,
+                    'phone_number' => $phoneNumber,
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
                     'bvn' => '',
                     'nin' => '',
-                    'email' => $user->email,
+                    'external_reference' => 'USER_' . $user->id
                 ];
 
                 // Bank code 100033 is PalmPay
