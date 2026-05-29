@@ -75,6 +75,11 @@ class Controller extends BaseController
                 'payload' => $payload,
                 'response' => $response->body()
             ]);
+        } else {
+            \Log::info('Autopilot API Success', [
+                'endpoint' => $endpoint,
+                'response' => $response->json()
+            ]);
         }
 
         return $response->json();
