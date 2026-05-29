@@ -60,7 +60,7 @@ class AuthController extends Controller
                 ])->setStatusCode(403);
             } 
             
-            // Check for banned device
+            // Check for banned device and max device limit
             if ($request->filled('device_id')) {
                 $bannedDevice = DB::table('user')
                     ->where('device_id', $request->device_id)
@@ -70,6 +70,17 @@ class AuthController extends Controller
                 if ($bannedDevice) {
                     return response()->json([
                         'message' => 'This device has been permanently blocked due to policy violations.',
+                        'status' => 403
+                    ])->setStatusCode(403);
+                }
+
+                $deviceCount = DB::table('user')
+                    ->where('device_id', $request->device_id)
+                    ->count();
+
+                if ($deviceCount >= 2) {
+                    return response()->json([
+                        'message' => 'Registration blocked: Maximum number of accounts reached for this device.',
                         'status' => 403
                     ])->setStatusCode(403);
                 }

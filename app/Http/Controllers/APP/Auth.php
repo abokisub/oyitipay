@@ -3861,6 +3861,33 @@ class Auth extends Controller
                         ], 400);
                     }
                 }
+
+                // Strict DOB & Phone Validation for BVN
+                if ($request->id_type === 'bvn') {
+                    if ($request->verification_method == 'dob' && !empty($verification['data']['date_of_birth'])) {
+                        $apiDob = $verification['data']['date_of_birth'];
+                        $userDob = $request->verification_value;
+                        if ($apiDob !== $userDob) {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'KYC Failed: The Date of Birth provided does not match the BVN record.'
+                            ], 400);
+                        }
+                    } elseif ($request->verification_method == 'phone' && !empty($verification['data']['phone_number'])) {
+                        $apiPhone = $verification['data']['phone_number'];
+                        $userPhone = $request->verification_value;
+                        
+                        $apiPhone10 = substr(preg_replace('/[^0-9]/', '', $apiPhone), -10);
+                        $userPhone10 = substr(preg_replace('/[^0-9]/', '', $userPhone), -10);
+                        
+                        if ($apiPhone10 !== $userPhone10) {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'KYC Failed: The Phone Number provided does not match the BVN record.'
+                            ], 400);
+                        }
+                    }
+                }
                 
                 // Handle Liveness Selfie Upload
                 if ($request->hasFile('liveness_selfie')) {
