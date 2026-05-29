@@ -85,7 +85,7 @@ class AddPointwaveTablesSafely extends Migration
                 $table->unsignedInteger('user_id')->unique();
                 $table->string('bvn')->nullable();
                 $table->string('nin')->nullable();
-                $table->enum('tier', ['tier1', 'tier2', 'tier3'])->default('tier1');
+                $table->enum('tier', ['tier_1', 'tier_2', 'tier_3'])->default('tier_1');
                 $table->enum('status', ['pending', 'verified', 'rejected'])->default('pending');
                 $table->decimal('daily_limit', 15, 2)->default(50000);
                 $table->decimal('transaction_limit', 15, 2)->default(50000);

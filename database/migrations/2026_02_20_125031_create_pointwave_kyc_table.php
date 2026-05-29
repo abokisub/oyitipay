@@ -20,7 +20,7 @@ class CreatePointwaveKycTable extends Migration
             $table->enum('id_type', ['bvn', 'nin']);
             $table->text('id_number_encrypted');
             $table->enum('kyc_status', ['not_submitted', 'pending', 'verified', 'rejected'])->default('not_submitted');
-            $table->enum('tier', ['tier_1', 'tier_3'])->default('tier_1');
+            $table->enum('tier', ['tier_1', 'tier_2', 'tier_3'])->default('tier_1');
             $table->decimal('daily_limit', 15, 2)->default(300000.00);
             $table->timestamp('verified_at')->nullable();
             $table->timestamps();
