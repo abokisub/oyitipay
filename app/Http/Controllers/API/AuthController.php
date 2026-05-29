@@ -58,7 +58,24 @@ class AuthController extends Controller
                     'message' => $validator->errors()->first(),
                     'status' => 403
                 ])->setStatusCode(403);
-            } else if (substr($request->phone, 0, 1) != '0') {
+            } 
+            
+            // Check for banned device
+            if ($request->filled('device_id')) {
+                $bannedDevice = DB::table('user')
+                    ->where('device_id', $request->device_id)
+                    ->whereIn('status', [2, 3])
+                    ->exists();
+
+                if ($bannedDevice) {
+                    return response()->json([
+                        'message' => 'This device has been permanently blocked due to policy violations.',
+                        'status' => 403
+                    ])->setStatusCode(403);
+                }
+            }
+
+            if (substr($request->phone, 0, 1) != '0') {
                 return response()->json([
                     'message' => 'Invalid Phone Number',
                     'status' => 403
@@ -88,6 +105,9 @@ class AuthController extends Controller
                     $user->status = '1'; // Auto-verify all users (OTP disabled)
                     $user->user_limit = $this->habukhan_key()->default_limit;
                     $user->pin = $request->pin ?? null;
+                    if ($request->filled('device_id')) {
+                        $user->device_id = $request->device_id;
+                    }
                     $user->save();
                     if ($user != null) {
                         $user = DB::table('user')->where(['id' => $user->id])->first();
@@ -678,6 +698,29 @@ class AuthController extends Controller
                     $check_system = User::where('username', $request->username);
                     if ($check_system->count() == 1) {
                         $user = $check_system->get()[0];
+
+                        // Check for banned device
+                        if ($request->filled('device_id')) {
+                            $bannedDevice = DB::table('user')
+                                ->where('device_id', $request->device_id)
+                                ->whereIn('status', [2, 3])
+                                ->exists();
+
+                            if ($bannedDevice) {
+                                return response()->json([
+                                    'message' => 'This device has been permanently blocked due to policy violations.',
+                                    'status' => 403
+                                ])->setStatusCode(403);
+                            }
+
+                            // Update user's device_id if they log in successfully
+                            if (password_verify($request->password, $user->password)) {
+                                DB::table('user')->where('id', $user->id)->update([
+                                    'device_id' => $request->device_id
+                                ]);
+                            }
+                        }
+
                         // Fetch settings to check enabled providers
                         try {
                             $settings = DB::table('settings')->select(

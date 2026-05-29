@@ -227,6 +227,31 @@ class KYCController extends Controller
             ]);
 
             if ($result['status'] === 'success') {
+                // Name Matching Check
+                $apiFirstName = strtolower(trim($result['data']['first_name'] ?? $result['data']['firstName'] ?? ''));
+                $apiLastName = strtolower(trim($result['data']['last_name'] ?? $result['data']['lastName'] ?? ''));
+                $apiFullName = strtolower(trim($result['data']['full_name'] ?? $result['data']['fullName'] ?? ''));
+
+                if (!empty($apiFirstName) || !empty($apiLastName) || !empty($apiFullName)) {
+                    $userFirstName = strtolower($firstName);
+                    $userLastName = strtolower($lastName);
+                    
+                    $firstNameMatch = !empty($apiFirstName) && (str_contains($userFirstName, $apiFirstName) || str_contains($apiFirstName, $userFirstName) || str_contains($apiFullName, $userFirstName));
+                    $lastNameMatch = !empty($apiLastName) && (str_contains($userLastName, $apiLastName) || str_contains($apiLastName, $userLastName) || str_contains($apiFullName, $userLastName));
+                    
+                    if (!$firstNameMatch && !$lastNameMatch) {
+                        // Rollback user status since it failed
+                        DB::table('user')->where('id', $user->id)->update([
+                            'kyc_status' => 'failed',
+                            'kyc' => '0'
+                        ]);
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'KYC Failed: Your registered profile name does not match the name on this ' . strtoupper($request->id_type) . '.'
+                        ], 400);
+                    }
+                }
+
                 // Update user table with KYC approval
                 DB::table('user')->where('id', $user->id)->update([
                     'kyc_status' => 'approved',

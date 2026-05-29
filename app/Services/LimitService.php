@@ -51,13 +51,23 @@ class LimitService
             ];
         }
 
+        // Dynamic Risk Limit for new users
+        $accountDate = Carbon::parse($user->date ?? Carbon::now());
+        $daysSinceRegistration = $accountDate->diffInDays(Carbon::now());
+        
+        // If account is less than 7 days old, cap their daily limit at 10,000 regardless of their tier
+        $effectiveDailyLimit = $user->daily_limit;
+        if ($daysSinceRegistration < 7) {
+            $effectiveDailyLimit = min(10000, $user->daily_limit);
+        }
+
         // 5. Check Daily Limit
-        if (($user->daily_used + $amount) > $user->daily_limit) {
-            $formattedLimit = number_format($user->daily_limit, 2);
-            $remaining = number_format($user->daily_limit - $user->daily_used, 2);
-            $upgradeMessage = ($kyc_tier === 'tier_1') 
-                ? ' Upgrade to Tier 2 (BVN) for higher limits.' 
-                : '';
+        if (($user->daily_used + $amount) > $effectiveDailyLimit) {
+            $formattedLimit = number_format($effectiveDailyLimit, 2);
+            $remaining = number_format($effectiveDailyLimit - $user->daily_used, 2);
+            $upgradeMessage = ($daysSinceRegistration < 7) 
+                ? ' Your account is currently under a 7-day risk limit of ₦10,000. This will automatically increase after 7 days.' 
+                : (($kyc_tier === 'tier_1') ? ' Upgrade to Tier 2 (BVN) for higher limits.' : '');
             return [
                 'allowed' => false,
                 'message' => "Daily limit reached! Your daily limit is ₦$formattedLimit. Remaining today: ₦$remaining.$upgradeMessage"
