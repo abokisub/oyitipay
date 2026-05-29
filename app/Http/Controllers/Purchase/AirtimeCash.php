@@ -388,7 +388,6 @@ class AirtimeCash extends Controller
             'pin' => $request->transferPin, // API expects 'pin' for share and sell pin
             'sessionId' => $request->sessionId,
             'senderNumber' => $phone,
-            'receiverNumber' => $network->phone,
             'reference' => $reference
         ];
 
