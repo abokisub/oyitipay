@@ -373,6 +373,8 @@ class AirtimeCash extends Controller
                     $msg = 'Incorrect Share & Sell PIN. Please check and try again.';
                 } elseif (str_contains(strtolower($msg), 'insufficient')) {
                     $msg = 'Insufficient airtime balance on the provided number.';
+                } elseif (str_contains(strtolower($msg), 'unauthenticated') || str_contains(strtolower($msg), 'expired')) {
+                    $msg = 'Your session has expired. Please go back and request a new OTP to continue.';
                 }
 
                 // Update database to failed (plan_status = 2)
@@ -399,6 +401,8 @@ class AirtimeCash extends Controller
             $msg = 'Incorrect Share & Sell PIN. Please check and try again.';
         } elseif (str_contains(strtolower($msg), 'insufficient')) {
             $msg = 'Insufficient airtime balance on the provided number.';
+        } elseif (str_contains(strtolower($msg), 'unauthenticated') || str_contains(strtolower($msg), 'expired')) {
+            $msg = 'Your session has expired. Please go back and request a new OTP to continue.';
         }
 
         // Update database to failed for standard failure response
