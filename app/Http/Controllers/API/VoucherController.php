@@ -252,6 +252,23 @@ class VoucherController extends Controller
             }
         }
 
+        // Record Voucher Credit Transaction
+        DB::table('message')->insert([
+            'username' => $user->username,
+            'message' => 'Voucher Claim - ' . $voucher->network . ' ' . strtoupper($voucher->type),
+            'transid' => 'VC_' . strtoupper(\Illuminate\Support\Str::random(10)),
+            'amount' => $voucher->amount,
+            'oldbal' => $current_bal,
+            'newbal' => $current_bal + $voucher->amount,
+            'trans_status' => 1,
+            'trans_date' => date('Y-m-d H:i:s'),
+            'trans_month' => date('F'),
+            'trans_year' => date('Y'),
+            'status' => 'credit',
+            'service' => 'VOUCHER',
+            'transaction_channel' => 'APP'
+        ]);
+
         return response()->json(['status' => 'success', 'message' => 'Voucher claimed and processed successfully!']);
     }
 }
