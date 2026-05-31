@@ -227,35 +227,22 @@ class KYCController extends Controller
             ]);
 
             if ($result['status'] === 'success') {
-                // Name Matching Check
-                $apiFirstName = strtolower(trim($result['data']['first_name'] ?? $result['data']['firstName'] ?? ''));
-                $apiLastName = strtolower(trim($result['data']['last_name'] ?? $result['data']['lastName'] ?? ''));
-                $apiFullName = strtolower(trim($result['data']['full_name'] ?? $result['data']['fullName'] ?? ''));
-
-                if (!empty($apiFirstName) || !empty($apiLastName) || !empty($apiFullName)) {
-                    $apiFullNameStr = strtolower(trim($apiFullName ?: "$apiFirstName $apiLastName"));
-                    
-                    $userWords = array_filter(explode(' ', strtolower(trim($user->name))));
-                    $allWordsMatch = true;
-                    
-                    foreach ($userWords as $word) {
-                        if (!str_contains($apiFullNameStr, $word)) {
-                            $allWordsMatch = false;
-                            break;
+                if ($request->id_type === 'bvn') {
+                    // Check DOB matching for BVN
+                    $apiDob = $result['data']['date_of_birth'] ?? $result['data']['dob'] ?? '';
+                    if (!empty($apiDob) && !empty($dobForVerification)) {
+                        $apiDobParsed = date('Y-m-d', strtotime($apiDob));
+                        $userDobParsed = date('Y-m-d', strtotime($dobForVerification));
+                        if ($apiDobParsed !== $userDobParsed) {
+                            DB::table('user')->where('id', $user->id)->update([
+                                'kyc_status' => 'failed',
+                                'kyc' => '0'
+                            ]);
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'KYC Failed: Your Date of Birth does not match the BVN records.'
+                            ], 400);
                         }
-                    }
-
-                    // Require all parts of the user's profile name to be in the ID document
-                    if (!$allWordsMatch) {
-                        // Rollback user status since it failed
-                        DB::table('user')->where('id', $user->id)->update([
-                            'kyc_status' => 'failed',
-                            'kyc' => '0'
-                        ]);
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => 'KYC Failed: Your registered profile name does not match the name on this ' . strtoupper($request->id_type) . '.'
-                        ], 400);
                     }
                 }
 
@@ -347,8 +334,8 @@ class KYCController extends Controller
         // NIN or default
         return [
             'tier' => 'tier1',
-            'single_limit' => 50000.00,
-            'daily_limit' => 200000.00
+            'single_limit' => 10000.00,
+            'daily_limit' => 10000.00
         ];
     }
 }

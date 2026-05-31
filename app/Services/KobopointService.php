@@ -221,8 +221,6 @@ class KobopointService
             if ($data['id_type'] === 'bvn') {
                 $payload = [
                     'bvn' => $data['id_number'],
-                    'first_name' => $data['first_name'],
-                    'last_name' => $data['last_name'],
                     'dob' => $data['date_of_birth'],
                 ];
                 $result = $this->verifyBVN($payload);
