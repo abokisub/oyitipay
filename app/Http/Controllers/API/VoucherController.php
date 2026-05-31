@@ -146,7 +146,8 @@ class VoucherController extends Controller
                 'phone' => $request->phone,
                 'bypass' => true,
                 'data_plan' => $voucher->data_plan_id,
-                'request-id' => $transid
+                'request-id' => $transid,
+                'pin' => $user->pin
             ]);
             $req->headers->set('Authorization', $originalAuthHeader);
             $res = app()->handle($req);
@@ -171,7 +172,8 @@ class VoucherController extends Controller
                 'amount' => $voucher->amount,
                 'vtu_type' => $voucher->vtu_type,
                 'bypass' => true,
-                'request-id' => $transid
+                'request-id' => $transid,
+                'pin' => $user->pin
             ]);
             $req->headers->set('Authorization', $originalAuthHeader);
             $res = app()->handle($req);
