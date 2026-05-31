@@ -3849,31 +3849,8 @@ class Auth extends Controller
 
                 \Log::info("KYC: {$providerName} verification SUCCESS for User {$user->id}");
 
-                // Name Matching Check
-                // NIN data is often nested inside an inner 'data' array and uses different keys
-                $innerData = $verification['data']['data'] ?? $verification['data'] ?? [];
-                $apiFirstName = strtolower(trim($verification['data']['first_name'] ?? $verification['data']['firstName'] ?? $innerData['firstName'] ?? $innerData['firstname'] ?? $innerData['first_name'] ?? ''));
-                $apiLastName = strtolower(trim($verification['data']['last_name'] ?? $verification['data']['lastName'] ?? $innerData['surname'] ?? $innerData['last_name'] ?? ''));
-                $apiFullName = strtolower(trim($verification['data']['full_name'] ?? $verification['data']['fullName'] ?? $innerData['fullName'] ?? $innerData['fullname'] ?? ''));
-
-                if (!empty($apiFirstName) || !empty($apiLastName) || !empty($apiFullName)) {
-                    $userWords = array_filter(explode(' ', strtolower(trim($user->name))));
-                    $apiWords = array_filter(explode(' ', $apiFullName));
-                    $commonWords = array_intersect($userWords, $apiWords);
-
-                    // If they don't share at least one identical name (first, middle, or last)
-                    if (count($commonWords) === 0) {
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => 'KYC Failed: Your registered profile name does not match the name on this ' . strtoupper($request->id_type) . '.'
-                        ], 400);
-                    } else {
-                        // Log a warning if it wasn't a perfect match, but let it pass
-                        if (count($userWords) !== count($apiWords) || count($commonWords) !== count($userWords)) {
-                            \Log::warning("KYC Name Partial Match: User {$user->name} vs API " . ($apiFullName ?: "$apiFirstName $apiLastName"));
-                        }
-                    }
-                }
+                // Name Matching Check removed as per new requirements.
+                // BVN now relies solely on DOB matching, and NIN is unrestricted.
 
                 // Strict DOB & Phone Validation for BVN
                 if ($request->id_type === 'bvn') {
@@ -3930,8 +3907,8 @@ class Auth extends Controller
                     $updateData['daily_limit'] = 2000000.00;
                 } else {
                     $updateData['kyc_tier'] = 'tier_1';
-                    $updateData['single_limit'] = 50000.00;
-                    $updateData['daily_limit'] = 200000.00;
+                    $updateData['single_limit'] = 10000.00;
+                    $updateData['daily_limit'] = 10000.00;
                 }
                 
                 $updateData['kyc'] = '1';
