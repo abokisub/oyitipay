@@ -566,9 +566,9 @@ Route::post('kobopoint-webhook', [\App\Http\Controllers\API\KobopointWebhookCont
 // PointWave Webhook Route (no auth, signature verification in middleware)
 Route::post('pointwave/webhook', [\App\Http\Controllers\API\PointWaveWebhookController::class, 'handleWebhook']);
 // Voucher API Routes
-Route::get('admin/vouchers/list/{id}/secure', [\App\Http\Controllers\Api\VoucherController::class, 'AdminListVouchers']);
-Route::post('admin/vouchers/create/{id}/secure', [\App\Http\Controllers\Api\VoucherController::class, 'AdminCreateVoucher']);
-Route::delete('admin/vouchers/delete/{voucher_id}/{id}/secure', [\App\Http\Controllers\Api\VoucherController::class, 'AdminDeleteVoucher']);
-Route::get('admin/vouchers/data-plans/{id}/secure', [\App\Http\Controllers\Api\VoucherController::class, 'GetDataPlans']);
+Route::get('admin/vouchers/list/{id}/secure', [\App\Http\Controllers\API\VoucherController::class, 'AdminListVouchers']);
+Route::post('admin/vouchers/create/{id}/secure', [\App\Http\Controllers\API\VoucherController::class, 'AdminCreateVoucher']);
+Route::delete('admin/vouchers/delete/{voucher_id}/{id}/secure', [\App\Http\Controllers\API\VoucherController::class, 'AdminDeleteVoucher']);
+Route::get('admin/vouchers/data-plans/{id}/secure', [\App\Http\Controllers\API\VoucherController::class, 'GetDataPlans']);
 
-Route::post('vouchers/claim', [\App\Http\Controllers\Api\VoucherController::class, 'ClaimVoucher']);
+Route::post('vouchers/claim', [\App\Http\Controllers\API\VoucherController::class, 'ClaimVoucher']);
