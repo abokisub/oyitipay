@@ -370,6 +370,12 @@ class AirtimePurchase extends Controller
                                                                                     DB::table('message')->where(['username' => $user->username, 'transid' => $transid])->update(['plan_status' => 1, 'message' => $successMessage]);
                                                                                     DB::table('airtime')->where(['username' => $user->username, 'transid' => $transid])->update(['plan_status' => 1]);
 
+                                                                                    // Award Cashback
+                                                                                    $cashback_setting = DB::table('cashback_settings')->where('service_type', 'airtime')->first();
+                                                                                    if ($cashback_setting && $cashback_setting->cashback_amount > 0) {
+                                                                                        DB::table('user')->where('id', $user->id)->increment('cashback_balance', $cashback_setting->cashback_amount);
+                                                                                    }
+
                                                                                     // SEND NOTIFICATION
                                                                                     try {
                                                                                         (new \App\Services\NotificationService())->sendAirtimeNotification(

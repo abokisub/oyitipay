@@ -50,6 +50,9 @@ class ProfileController extends Controller
             $nextTier = $tier < 2 ? $tier + 1 : null;
             $nextTierLimits = $nextTier ? $this->getTierLimits($nextTier) : null;
 
+            // Get referral count
+            $referralCount = DB::table('user')->where('ref', $user->username)->count();
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -66,7 +69,9 @@ class ProfileController extends Controller
                     'can_upgrade' => $tier < 2,
                     'upgrade_message' => $this->getUpgradeMessage($tier, $user->kyc_status),
                     'is_new_account' => false,
-                    'theme' => $this->getUserTheme($user->id)
+                    'theme' => $this->getUserTheme($user->id),
+                    'cashback_balance' => (float)($user->cashback_balance ?? 0),
+                    'referral_count' => $referralCount
                 ]
             ]);
         } else {

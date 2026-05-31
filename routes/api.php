@@ -101,6 +101,8 @@ Route::get('user/card/{id}/transactions', [VirtualCardController::class , 'getCa
 // Card Settings (Admin)
 Route::get('/secure/card/settings/{id}/habukhan/secure', [AdminController::class , 'getCardSettings']);
 Route::post('/secure/card/settings/update/{id}/habukhan/secure', [AdminController::class , 'UpdateDiscountOther']);
+Route::get('/secure/cashback/settings/{id}/habukhan/secure', [AdminController::class , 'getCashbackSettings']);
+Route::post('/secure/cashback/settings/update/{id}/habukhan/secure', [AdminController::class , 'updateCashbackSettings']);
 
 Route::get('/secure/welcome', [AppController::class , 'welcomeMessage']);
 Route::get('/secure/discount/other', [AppController::class , 'discountOther']);
@@ -563,3 +565,10 @@ Route::post('kobopoint-webhook', [\App\Http\Controllers\API\KobopointWebhookCont
 
 // PointWave Webhook Route (no auth, signature verification in middleware)
 Route::post('pointwave/webhook', [\App\Http\Controllers\API\PointWaveWebhookController::class, 'handleWebhook']);
+// Voucher API Routes
+Route::get('admin/vouchers/list/{id}/secure', [\App\Http\Controllers\Api\VoucherController::class, 'AdminListVouchers']);
+Route::post('admin/vouchers/create/{id}/secure', [\App\Http\Controllers\Api\VoucherController::class, 'AdminCreateVoucher']);
+Route::delete('admin/vouchers/delete/{voucher_id}/{id}/secure', [\App\Http\Controllers\Api\VoucherController::class, 'AdminDeleteVoucher']);
+Route::get('admin/vouchers/data-plans/{id}/secure', [\App\Http\Controllers\Api\VoucherController::class, 'GetDataPlans']);
+
+Route::post('vouchers/claim', [\App\Http\Controllers\Api\VoucherController::class, 'ClaimVoucher']);

@@ -1,0 +1,193 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use App\Models\Voucher;
+
+class VoucherController extends Controller
+{
+    // Admin routes
+    public function AdminListVouchers(Request $request)
+    {
+        $vouchers = Voucher::orderBy('id', 'desc')->get();
+        return response()->json(['status' => 'success', 'vouchers' => $vouchers]);
+    }
+
+    public function AdminCreateVoucher(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'type' => 'required|in:airtime,data',
+            'network' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'fail', 'message' => $validator->errors()->first()]);
+        }
+
+        $code = strtoupper(Str::random(12));
+        
+        $voucher = new Voucher();
+        $voucher->code = $code;
+        $voucher->type = $request->type;
+        $voucher->network = $request->network;
+        $voucher->status = 'unused';
+        
+        if ($request->type === 'airtime') {
+            $voucher->amount = $request->amount;
+            $voucher->vtu_type = $request->vtu_type; // VTU or Share and Sell
+        } else {
+            $plan = DB::table('data_plan')->where('plan_id', $request->data_plan_id)->first();
+            if (!$plan) {
+                return response()->json(['status' => 'fail', 'message' => 'Invalid data plan']);
+            }
+            $voucher->data_plan_id = $request->data_plan_id;
+            // set an estimated amount from plan
+            $voucher->amount = $plan->smart ?? $plan->api ?? $plan->agent ?? 0;
+        }
+
+        $voucher->save();
+
+        return response()->json(['status' => 'success', 'message' => 'Voucher created successfully', 'voucher' => $voucher]);
+    }
+
+    public function AdminDeleteVoucher(Request $request, $id)
+    {
+        $voucher = Voucher::find($id);
+        if ($voucher) {
+            $voucher->delete();
+            return response()->json(['status' => 'success', 'message' => 'Voucher deleted successfully']);
+        }
+        return response()->json(['status' => 'fail', 'message' => 'Voucher not found']);
+    }
+
+    public function GetDataPlans(Request $request)
+    {
+        $network = $request->network;
+        $plans = DB::table('data_plan')->where('network', $network)->where('plan_status', 1)->get();
+        return response()->json(['status' => 'success', 'plans' => $plans]);
+    }
+
+    // User claim route
+    public function ClaimVoucher(Request $request)
+    {
+        // Require authentication
+        $authHeader = $request->header('Authorization');
+        if (strpos($authHeader, 'Token ') === 0) {
+            $authHeader = substr($authHeader, 6);
+        }
+        $accessToken = trim($authHeader);
+
+        $user = DB::table('user')->where(function ($query) use ($accessToken) {
+            $query->where('apikey', $accessToken)
+                ->orWhere('app_key', $accessToken)
+                ->orWhere('habukhan_key', $accessToken);
+        })->where('status', 1)->first();
+
+        if (!$user) {
+            return response()->json(['status' => 'fail', 'message' => 'Unauthorized'])->setStatusCode(401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string',
+            'phone' => 'required|numeric|digits:11'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'fail', 'message' => $validator->errors()->first()]);
+        }
+
+        $voucher = Voucher::where('code', $request->code)->first();
+
+        if (!$voucher) {
+            return response()->json(['status' => 'fail', 'message' => 'Invalid voucher code']);
+        }
+
+        if ($voucher->status === 'used') {
+            return response()->json(['status' => 'fail', 'message' => 'This voucher has already been used']);
+        }
+
+        // Fulfill voucher logic - we fund wallet temporally or we directly pass it to DataPurchase
+        // For simplicity, we directly call DataPurchase or AirtimePurchase
+        // but simulate wallet balance
+
+        DB::beginTransaction();
+
+        $voucher->status = 'used';
+        $voucher->used_by = $user->username;
+        $voucher->used_at = now();
+        $voucher->save();
+
+        // Let's fund the user's wallet with the voucher amount so they can 'pay' for the transaction normally
+        // Then we deduct it back via the standard flow. Wait, if we use the standard flow, it deducts from balance.
+        // If we fund them $voucher->amount, and the standard flow deducts $voucher->amount, they net 0.
+        
+        $current_bal = $user->bal;
+        DB::table('user')->where('id', $user->id)->update(['bal' => $current_bal + $voucher->amount]);
+
+        DB::commit();
+
+        // Dispatch purchase logic via internal request or HTTP request
+        $system = "APP";
+        $transid = 'VOUCHER_' . strtoupper(Str::random(10));
+        
+        if ($voucher->type === 'data') {
+            // Internal call
+            $req = Request::create('/api/data', 'POST', [
+                'network' => $voucher->network,
+                'phone' => $request->phone,
+                'bypass' => true,
+                'data_plan' => $voucher->data_plan_id,
+                'request-id' => $transid
+            ]);
+            $req->headers->set('Authorization', $accessToken);
+            $res = app()->handle($req);
+            
+            $data = json_decode($res->getContent(), true);
+            if (!isset($data['status']) || $data['status'] !== 'success') {
+                // reverse voucher
+                $voucher->status = 'unused';
+                $voucher->used_by = null;
+                $voucher->used_at = null;
+                $voucher->save();
+                
+                // reverse fund
+                DB::table('user')->where('id', $user->id)->decrement('bal', $voucher->amount);
+                
+                return response()->json(['status' => 'fail', 'message' => 'Failed to process data: ' . ($data['message'] ?? 'Unknown Error')]);
+            }
+        } else {
+             $req = Request::create('/api/airtime', 'POST', [
+                'network' => $voucher->network,
+                'phone' => $request->phone,
+                'amount' => $voucher->amount,
+                'vtu_type' => $voucher->vtu_type,
+                'bypass' => true,
+                'request-id' => $transid
+            ]);
+            $req->headers->set('Authorization', $accessToken);
+            $res = app()->handle($req);
+            
+            $data = json_decode($res->getContent(), true);
+            if (!isset($data['status']) || $data['status'] !== 'success') {
+                // reverse voucher
+                $voucher->status = 'unused';
+                $voucher->used_by = null;
+                $voucher->used_at = null;
+                $voucher->save();
+                
+                // reverse fund
+                DB::table('user')->where('id', $user->id)->decrement('bal', $voucher->amount);
+                
+                return response()->json(['status' => 'fail', 'message' => 'Failed to process airtime: ' . ($data['message'] ?? 'Unknown Error')]);
+            }
+        }
+
+        return response()->json(['status' => 'success', 'message' => 'Voucher claimed and processed successfully!']);
+    }
+}
+

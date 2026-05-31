@@ -14,6 +14,29 @@ use Illuminate\Support\Facades\Validator;
 class AdminController extends Controller
 {
 
+    public function getCashbackSettings(Request $request)
+    {
+        $settings = DB::table('cashback_settings')->get();
+        return response()->json(['settings' => $settings]);
+    }
+
+    public function updateCashbackSettings(Request $request)
+    {
+        $service_type = $request->input('service_type');
+        $amount = $request->input('cashback_amount');
+
+        if (!$service_type || $amount === null) {
+            return response()->json(['message' => 'Invalid input'], 400);
+        }
+
+        DB::table('cashback_settings')->updateOrInsert(
+            ['service_type' => $service_type],
+            ['cashback_amount' => $amount, 'updated_at' => now()]
+        );
+
+        return response()->json(['message' => 'Cashback settings updated successfully']);
+    }
+
     public function userRequest(Request $request)
     {
         $explode_url = explode(',', config('app.habukhan_app_key'));

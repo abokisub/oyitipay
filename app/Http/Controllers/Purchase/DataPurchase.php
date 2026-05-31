@@ -510,6 +510,12 @@ class DataPurchase extends Controller
                                                                                                     // state success transaction
                                                                                                     DB::table('message')->where(['username' => $user->username, 'transid' => $transid])->update(['plan_status' => 1, 'message' => $successMessage]);
                                                                                                     DB::table('data')->where(['username' => $user->username, 'transid' => $transid])->update(['plan_status' => 1, ]);
+                                                                                                    
+                                                                                                    // Award Cashback
+                                                                                                    $cashback_setting = DB::table('cashback_settings')->where('service_type', 'data')->first();
+                                                                                                    if ($cashback_setting && $cashback_setting->cashback_amount > 0) {
+                                                                                                        DB::table('user')->where('id', $user->id)->increment('cashback_balance', $cashback_setting->cashback_amount);
+                                                                                                    }
 
                                                                                                     // SEND NOTIFICATION
                                                                                                     try {
