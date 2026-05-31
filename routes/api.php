@@ -571,4 +571,5 @@ Route::post('admin/vouchers/create/{id}/secure', [\App\Http\Controllers\API\Vouc
 Route::delete('admin/vouchers/delete/{voucher_id}/{id}/secure', [\App\Http\Controllers\API\VoucherController::class, 'AdminDeleteVoucher']);
 Route::get('admin/vouchers/data-plans/{id}/secure', [\App\Http\Controllers\API\VoucherController::class, 'GetDataPlans']);
 
+Route::post('vouchers/preview', [\App\Http\Controllers\API\VoucherController::class, 'PreviewVoucher']);
 Route::post('vouchers/claim', [\App\Http\Controllers\API\VoucherController::class, 'ClaimVoucher']);

@@ -72,6 +72,58 @@ class VoucherController extends Controller
         return response()->json(['status' => 'success', 'plans' => $plans]);
     }
 
+    public function PreviewVoucher(Request $request)
+    {
+        // Require authentication
+        $authHeader = $request->header('Authorization');
+        if (strpos($authHeader, 'Token ') === 0) {
+            $authHeader = substr($authHeader, 6);
+        } elseif (strpos($authHeader, 'Bearer ') === 0) {
+            $authHeader = substr($authHeader, 7);
+        }
+        $accessToken = trim($authHeader);
+
+        $user = DB::table('user')->where(function ($query) use ($accessToken) {
+            $query->where('apikey', $accessToken)
+                ->orWhere('app_key', $accessToken)
+                ->orWhere('habukhan_key', $accessToken);
+        })->where('status', 1)->first();
+
+        if (!$user) {
+            return response()->json(['status' => 'fail', 'message' => 'Unauthorized'])->setStatusCode(401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'fail', 'message' => $validator->errors()->first()]);
+        }
+
+        $code = $request->code;
+        $voucher = Voucher::where('code', $code)->first();
+
+        if (!$voucher) {
+            return response()->json(['status' => 'fail', 'message' => 'Invalid voucher code']);
+        }
+
+        if ($voucher->status !== 'unused') {
+            return response()->json(['status' => 'fail', 'message' => 'Voucher has already been used']);
+        }
+
+        // Return preview data
+        return response()->json([
+            'status' => 'success',
+            'voucher' => [
+                'type' => $voucher->type,
+                'network' => $voucher->network,
+                'amount' => $voucher->amount,
+                'vtu_type' => $voucher->vtu_type,
+            ]
+        ]);
+    }
+
     // User claim route
     public function ClaimVoucher(Request $request)
     {
