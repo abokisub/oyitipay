@@ -73,6 +73,7 @@ Route::post('user/kyc/submit', [App\Http\Controllers\API\KYCController::class , 
 Route::get('profile/limits', [ProfileController::class , 'getLimits'])->middleware('auth.token');
 Route::post('profile/statement', [ProfileController::class , 'generateStatement'])->middleware('auth.token');
 Route::post('profile/update-theme', [ProfileController::class , 'updateTheme'])->middleware('auth.token');
+Route::post('profile/cashback/withdraw', [ProfileController::class , 'withdrawCashback'])->middleware('auth.token');
 
 // Customer Creation (Phase 3)
 Route::post('/user/customer/create', [AuthController::class , 'createCustomer'])->middleware(['auth.token']);

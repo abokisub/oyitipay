@@ -268,6 +268,51 @@ class ProfileController extends Controller
     }
 
     /**
+     * Withdraw Cashback to Main Balance
+     */
+    public function withdrawCashback(Request $request)
+    {
+        $user = DB::table('user')->where('id', $request->user()->id)->first();
+        if (!$user) return response()->json(['status' => 'fail', 'message' => 'Unauthorized'])->setStatusCode(401);
+
+        $amount = (float)($user->cashback_balance ?? 0);
+        if ($amount <= 0) {
+            return response()->json(['status' => 'fail', 'message' => 'Insufficient cashback balance']);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            DB::table('user')->where('id', $user->id)->update([
+                'bal' => $user->bal + $amount,
+                'cashback_balance' => 0
+            ]);
+
+            DB::table('message')->insert([
+                'username' => $user->username,
+                'message' => 'Cashback Withdrawal to Wallet',
+                'transid' => 'CB_' . strtoupper(\Illuminate\Support\Str::random(10)),
+                'amount' => $amount,
+                'oldbal' => $user->bal,
+                'newbal' => $user->bal + $amount,
+                'trans_status' => 1,
+                'trans_date' => date('Y-m-d H:i:s'),
+                'trans_month' => date('F'),
+                'trans_year' => date('Y'),
+                'status' => 'credit',
+                'service' => 'CASHBACK',
+                'transaction_channel' => 'APP'
+            ]);
+
+            DB::commit();
+            return response()->json(['status' => 'success', 'message' => 'Cashback withdrawn successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'fail', 'message' => 'Failed to withdraw cashback']);
+        }
+    }
+
+    /**
      * Send statement email with PDF attachment
      */
     private function sendStatementEmailWithPdf($user, $emailData)
