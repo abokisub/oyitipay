@@ -147,7 +147,9 @@ class VoucherController extends Controller
                 'bypass' => true,
                 'data_plan' => $voucher->data_plan_id,
                 'request-id' => $transid,
-                'pin' => $user->pin
+                'pin' => $user->pin,
+                'user_id' => $user->id,
+                'token' => $accessToken
             ]);
             $req->headers->set('Authorization', $originalAuthHeader);
             $res = app()->handle($req);
@@ -170,10 +172,12 @@ class VoucherController extends Controller
                 'network' => $voucher->network,
                 'phone' => $request->phone,
                 'amount' => $voucher->amount,
-                'vtu_type' => $voucher->vtu_type,
+                'plan_type' => $voucher->vtu_type,
                 'bypass' => true,
                 'request-id' => $transid,
-                'pin' => $user->pin
+                'pin' => $user->pin,
+                'user_id' => $user->id,
+                'token' => $accessToken
             ]);
             $req->headers->set('Authorization', $originalAuthHeader);
             $res = app()->handle($req);
