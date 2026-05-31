@@ -79,6 +79,8 @@ class VoucherController extends Controller
         $authHeader = $request->header('Authorization');
         if (strpos($authHeader, 'Token ') === 0) {
             $authHeader = substr($authHeader, 6);
+        } elseif (strpos($authHeader, 'Bearer ') === 0) {
+            $authHeader = substr($authHeader, 7);
         }
         $accessToken = trim($authHeader);
 
