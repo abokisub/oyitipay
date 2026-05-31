@@ -137,6 +137,8 @@ class VoucherController extends Controller
         $system = "APP";
         $transid = 'VOUCHER_' . strtoupper(Str::random(10));
         
+        $originalAuthHeader = $request->header('Authorization');
+        
         if ($voucher->type === 'data') {
             // Internal call
             $req = Request::create('/api/data', 'POST', [
@@ -146,7 +148,7 @@ class VoucherController extends Controller
                 'data_plan' => $voucher->data_plan_id,
                 'request-id' => $transid
             ]);
-            $req->headers->set('Authorization', $accessToken);
+            $req->headers->set('Authorization', $originalAuthHeader);
             $res = app()->handle($req);
             
             $data = json_decode($res->getContent(), true);
@@ -163,7 +165,7 @@ class VoucherController extends Controller
                 return response()->json(['status' => 'fail', 'message' => 'Failed to process data: ' . ($data['message'] ?? 'Unknown Error')]);
             }
         } else {
-             $req = Request::create('/api/airtime', 'POST', [
+             $req = Request::create('/api/topup', 'POST', [
                 'network' => $voucher->network,
                 'phone' => $request->phone,
                 'amount' => $voucher->amount,
@@ -171,7 +173,7 @@ class VoucherController extends Controller
                 'bypass' => true,
                 'request-id' => $transid
             ]);
-            $req->headers->set('Authorization', $accessToken);
+            $req->headers->set('Authorization', $originalAuthHeader);
             $res = app()->handle($req);
             
             $data = json_decode($res->getContent(), true);
