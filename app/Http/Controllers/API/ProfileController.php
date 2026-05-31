@@ -295,13 +295,12 @@ class ProfileController extends Controller
                 'amount' => $amount,
                 'oldbal' => $user->bal,
                 'newbal' => $user->bal + $amount,
-                'trans_status' => 1,
-                'trans_date' => date('Y-m-d H:i:s'),
-                'trans_month' => date('F'),
-                'trans_year' => date('Y'),
-                'status' => 'credit',
-                'service' => 'CASHBACK',
-                'transaction_channel' => 'APP'
+                'habukhan_date' => date('d M Y h:ia'),
+                'plan_status' => 1,
+                'phone_account' => 'Wallet',
+                'role' => 'credit',
+                'service_type' => 'Cashback',
+                'transaction_channel' => 'INTERNAL'
             ]);
 
             DB::commit();
