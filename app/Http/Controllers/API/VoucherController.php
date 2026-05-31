@@ -139,10 +139,13 @@ class VoucherController extends Controller
         
         $originalAuthHeader = $request->header('Authorization');
         
+        $networkRecord = DB::table('network')->where('network', $voucher->network)->first();
+        $networkPlanId = $networkRecord ? $networkRecord->plan_id : $voucher->network;
+        
         if ($voucher->type === 'data') {
             // Internal call
             $req = Request::create('/api/data', 'POST', [
-                'network' => $voucher->network,
+                'network' => $networkPlanId,
                 'phone' => $request->phone,
                 'bypass' => true,
                 'data_plan' => $voucher->data_plan_id,
@@ -169,7 +172,7 @@ class VoucherController extends Controller
             }
         } else {
              $req = Request::create('/api/topup', 'POST', [
-                'network' => $voucher->network,
+                'network' => $networkPlanId,
                 'phone' => $request->phone,
                 'amount' => (int) $voucher->amount,
                 'plan_type' => $voucher->vtu_type,
