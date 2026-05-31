@@ -228,20 +228,37 @@ class KYCController extends Controller
 
             if ($result['status'] === 'success') {
                 if ($request->id_type === 'bvn') {
-                    // Check DOB matching for BVN
-                    $apiDob = $result['data']['date_of_birth'] ?? $result['data']['dob'] ?? '';
-                    if (!empty($apiDob) && !empty($dobForVerification)) {
-                        $apiDobParsed = date('Y-m-d', strtotime($apiDob));
-                        $userDobParsed = date('Y-m-d', strtotime($dobForVerification));
-                        if ($apiDobParsed !== $userDobParsed) {
-                            DB::table('user')->where('id', $user->id)->update([
-                                'kyc_status' => 'failed',
-                                'kyc' => '0'
-                            ]);
-                            return response()->json([
-                                'status' => 'error',
-                                'message' => 'KYC Failed: Your Date of Birth does not match the BVN records.'
-                            ], 400);
+                    $method = $request->verification_method ?? 'dob';
+                    $val = $request->verification_value ?? $dobForVerification;
+                    
+                    if ($method === 'phone') {
+                        // Check Phone matching
+                        $apiPhone = $result['data']['phone_number'] ?? $result['data']['phone'] ?? '';
+                        if (!empty($apiPhone) && !empty($val)) {
+                            // Basic normalization (e.g. 080... vs 23480...)
+                            $apiPhoneNorm = substr(preg_replace('/[^0-9]/', '', $apiPhone), -10);
+                            $valNorm = substr(preg_replace('/[^0-9]/', '', $val), -10);
+                            if ($apiPhoneNorm !== $valNorm) {
+                                DB::table('user')->where('id', $user->id)->update(['kyc_status' => 'failed', 'kyc' => '0']);
+                                return response()->json([
+                                    'status' => 'error',
+                                    'message' => 'KYC Failed: Your Phone Number does not match the BVN records.'
+                                ], 400);
+                            }
+                        }
+                    } else {
+                        // Check DOB matching
+                        $apiDob = $result['data']['date_of_birth'] ?? $result['data']['dob'] ?? '';
+                        if (!empty($apiDob) && !empty($val)) {
+                            $apiDobParsed = date('Y-m-d', strtotime($apiDob));
+                            $userDobParsed = date('Y-m-d', strtotime($val));
+                            if ($apiDobParsed !== $userDobParsed) {
+                                DB::table('user')->where('id', $user->id)->update(['kyc_status' => 'failed', 'kyc' => '0']);
+                                return response()->json([
+                                    'status' => 'error',
+                                    'message' => 'KYC Failed: Your Date of Birth does not match the BVN records.'
+                                ], 400);
+                            }
                         }
                     }
                 }
