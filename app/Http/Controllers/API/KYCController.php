@@ -233,12 +233,25 @@ class KYCController extends Controller
                 $apiFullName = strtolower(trim($result['data']['full_name'] ?? $result['data']['fullName'] ?? ''));
 
                 if (!empty($apiFirstName) || !empty($apiLastName) || !empty($apiFullName)) {
-                    $userWords = array_filter(explode(' ', strtolower(trim($user->name))));
-                    $apiWords = array_filter(explode(' ', $apiFullName));
-                    $commonWords = array_intersect($userWords, $apiWords);
+                    $apiFullNameStr = strtolower(trim($apiFullName ?: "$apiFirstName $apiLastName"));
+                    
+                    $userFirstName = strtolower(trim($firstName));
+                    $userLastNameWords = array_filter(explode(' ', strtolower(trim($lastName))));
+                    
+                    // Check if first name matches
+                    $firstNameMatch = !empty($userFirstName) && str_contains($apiFullNameStr, $userFirstName);
+                    
+                    // Check if any part of the last name matches
+                    $lastNameMatch = false;
+                    foreach ($userLastNameWords as $word) {
+                        if (str_contains($apiFullNameStr, $word)) {
+                            $lastNameMatch = true;
+                            break;
+                        }
+                    }
 
-                    // If they don't share at least one identical name (first, middle, or last)
-                    if (count($commonWords) === 0) {
+                    // Require at least the first name OR last name to match
+                    if (!$firstNameMatch && !$lastNameMatch) {
                         // Rollback user status since it failed
                         DB::table('user')->where('id', $user->id)->update([
                             'kyc_status' => 'failed',
@@ -249,9 +262,9 @@ class KYCController extends Controller
                             'message' => 'KYC Failed: Your registered profile name does not match the name on this ' . strtoupper($request->id_type) . '.'
                         ], 400);
                     } else {
-                        // Log a warning if it wasn't a perfect match, but let it pass
-                        if (count($userWords) !== count($apiWords) || count($commonWords) !== count($userWords)) {
-                            \Log::warning("KYC Name Partial Match: User {$user->name} vs API " . ($apiFullName ?: "$apiFirstName $apiLastName"));
+                        // Log a warning if it wasn't a perfect match (both first and last name matching)
+                        if (!$firstNameMatch || !$lastNameMatch) {
+                            \Log::warning("KYC Name Partial Match: User {$user->name} vs API " . $apiFullNameStr);
                         }
                     }
                 }
