@@ -171,7 +171,7 @@ class VoucherController extends Controller
              $req = Request::create('/api/topup', 'POST', [
                 'network' => $voucher->network,
                 'phone' => $request->phone,
-                'amount' => $voucher->amount,
+                'amount' => (int) $voucher->amount,
                 'plan_type' => $voucher->vtu_type,
                 'bypass' => true,
                 'request-id' => $transid,
