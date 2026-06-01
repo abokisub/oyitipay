@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         $schedule->command('banks:sync')->daily();
+        $schedule->command('app:ban-duplicates')->hourly(); // Auto-ban duplicate accounts
         
         // Cleanup invalid FCM tokens weekly (automatic, no notifications sent)
         // This runs in the background and removes tokens that fail during normal operations

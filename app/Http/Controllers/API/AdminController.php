@@ -3922,4 +3922,65 @@ class AdminController extends Controller
         }
         return response()->json(['status' => 403, 'message' => 'Unauthorized'])->setStatusCode(403);
     }
+
+    public function getBannedUsers(Request $request)
+    {
+        $explode_url = explode(',', config('app.habukhan_app_key'));
+        if (!$request->headers->get('origin') || in_array($request->headers->get('origin'), $explode_url)) {
+            $users = DB::table('user')
+                ->where('status', 2)
+                ->select('id', 'username', 'name', 'email', 'reason', 'date')
+                ->orderBy('id', 'desc')
+                ->get();
+            return response()->json([
+                'status' => 'success',
+                'data' => $users
+            ]);
+        }
+        return response()->json(['status' => 403, 'message' => 'Unauthorized'])->setStatusCode(403);
+    }
+
+    public function unbanUser(Request $request, $id)
+    {
+        $explode_url = explode(',', config('app.habukhan_app_key'));
+        if (!$request->headers->get('origin') || in_array($request->headers->get('origin'), $explode_url)) {
+            DB::table('user')->where('id', $id)->update(['status' => 1, 'reason' => null]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'User unbanned successfully'
+            ]);
+        }
+        return response()->json(['status' => 403, 'message' => 'Unauthorized'])->setStatusCode(403);
+    }
+
+    public function manualBanUser(Request $request)
+    {
+        $explode_url = explode(',', config('app.habukhan_app_key'));
+        if (!$request->headers->get('origin') || in_array($request->headers->get('origin'), $explode_url)) {
+            $identifier = $request->identifier;
+            $reason = $request->reason ?? 'Policy Violation';
+            
+            $user = DB::table('user')
+                ->where('username', $identifier)
+                ->orWhere('email', $identifier)
+                ->first();
+
+            if ($user) {
+                DB::table('user')->where('id', $user->id)->update([
+                    'status' => 2,
+                    'reason' => $reason
+                ]);
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'User banned successfully'
+                ]);
+            }
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found'
+            ], 404);
+        }
+        return response()->json(['status' => 403, 'message' => 'Unauthorized'])->setStatusCode(403);
+    }
 }

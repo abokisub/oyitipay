@@ -78,7 +78,7 @@ class AuthController extends Controller
                     ->where('device_id', $request->device_id)
                     ->count();
 
-                if ($deviceCount >= 2) {
+                if ($deviceCount >= 1) {
                     return response()->json([
                         'message' => 'Registration blocked: Maximum number of accounts reached for this device.',
                         'status' => 403
@@ -895,26 +895,26 @@ class AuthController extends Controller
                         $is_legacy_hash_match = ($hash == $user->password);
                         $is_md5_match = ($mdpass == $user->password);
 
-                        // FIX: Replaced XOR chain with simple OR. If ANY credential match is valid, let them in.
                         if ($is_bcrypt_match || $is_plain_match || $is_legacy_hash_match || $is_md5_match) {
 
-                            if ($user->status == 1 || trim(strtoupper($user->type)) == 'ADMIN' || strcasecmp($user->username, 'Habukhan') == 0) {
-                                return response()->json([
-                                    'status' => 'success',
-                                    'message' => 'Login successfully',
-                                    'user' => $user_details,
-                                    'token' => $this->generatetoken($user->id)
-                                ]);
-                            } else if ($user->status == 2) {
+                            if ($user->status == 2) {
+                                $reasonMsg = !empty($user->reason) ? ' Reason: ' . $user->reason : '';
                                 return response()->json([
                                     'status' => 403,
-                                    'message' => $user->username . ' Your Account Has Been Banned'
+                                    'message' => 'Account Banned.' . $reasonMsg
                                 ])->setStatusCode(403);
                             } else if ($user->status == 3) {
                                 return response()->json([
                                     'status' => 403,
                                     'message' => $user->username . ' Your Account Has Been Deactivated'
                                 ])->setStatusCode(403);
+                            } else if ($user->status == 1 || trim(strtoupper($user->type)) == 'ADMIN' || strcasecmp($user->username, 'Habukhan') == 0) {
+                                return response()->json([
+                                    'status' => 'success',
+                                    'message' => 'Login successfully',
+                                    'user' => $user_details,
+                                    'token' => $this->generatetoken($user->id)
+                                ]);
                             } else if ($user->status == 0) {
                                 // SKIP OTP - Auto-verify and login for all users
                                 DB::table('user')->where(['id' => $user->id])->update(['status' => 1]);

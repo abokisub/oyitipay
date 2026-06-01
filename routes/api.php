@@ -252,6 +252,9 @@ Route::get('all/user/infomation/admin/setting/{id}/secure', [AdminController::cl
 Route::get('bank/info/all/bank/all/bank/{id}/secure', [AdminController::class , 'AllBankDetails']);
 Route::get('user/bank/account/details/{id}/secure', [AdminController::class , 'UserBankAccountD']);
 Route::get('user/banned/habukhan/ade/banned/user/{id}/secure', [AdminController::class , 'AllUserBanned']);
+Route::get('secure/users/banned/list', [AdminController::class , 'getBannedUsers']);
+Route::post('secure/users/unban/{id}', [AdminController::class , 'unbanUser']);
+Route::post('secure/users/ban', [AdminController::class , 'manualBanUser']);
 Route::get('all/system/plan/purchase/by/habukhan/{id}/secure', [AdminController::class , 'AllSystemPlan']);
 Route::get('system/all/user/kyc/records/{id}/secure', [AdminController::class , 'AllUsersKyc']);
 Route::post('system/admin/kyc/approve/{id}/secure', [AdminController::class , 'ApproveUserKyc']);

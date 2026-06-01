@@ -160,6 +160,25 @@ class TransferPurchase extends Controller
             ])->setStatusCode(403);
         }
 
+        // --- WASH TRADING PREVENTION ---
+        $servicePurchasesCount = DB::table('message')
+            ->where('username', $user->username)
+            ->whereNotIn('role', ['credit', 'transfer', 'upgrade']) // Exclude deposits, transfers, and account upgrades
+            ->count();
+            
+        if ($servicePurchasesCount == 0) {
+            DB::table('user')->where('id', $user->id)->update([
+                'status' => 2,
+                'reason' => 'First-time transfer without prior service purchase (Wash Trading Prevention)'
+            ]);
+            
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Account Banned: First-time transfers without prior service purchases are not allowed due to security policies. Please contact support.'
+            ])->setStatusCode(403);
+        }
+        // ---------------------------------
+
         // 1. Calculate Charges (Prepare Data OUTSIDE transaction if possible to minimize lock time)
         $amount = $request->amount;
 
