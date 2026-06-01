@@ -94,26 +94,43 @@ class ProcessKobopointWebhook implements ShouldQueue
             throw new \Exception('Account number not found in webhook data');
         }
 
-        $virtualAccount = null;
+        $user = null;
+        $accountNumber = null;
+        $customerId = null;
 
         if (is_numeric($accountNumberField)) {
             $virtualAccount = PointWaveVirtualAccount::where('account_number', $accountNumberField)->first();
+            
+            // Check if it's stored directly on the user table as a palmpay or pointwave account
+            if (!$virtualAccount) {
+                $userByDirectMatch = User::where('palmpay', $accountNumberField)
+                    ->orWhere('pointwave_account_number', $accountNumberField)
+                    ->first();
+                    
+                if ($userByDirectMatch) {
+                    $user = $userByDirectMatch;
+                    $accountNumber = $accountNumberField;
+                    $customerId = $user->kobopoint_customer_id ?? $user->pointwave_customer_id;
+                }
+            } else {
+                $user = $virtualAccount->user;
+                $accountNumber = $virtualAccount->account_number;
+                $customerId = $virtualAccount->customer_id;
+            }
         } else {
             // In some cases, the payload contains the account name instead of the account number
             $virtualAccount = PointWaveVirtualAccount::where('account_name', 'LIKE', '%' . $accountNumberField . '%')->first();
+            
+            if ($virtualAccount) {
+                $user = $virtualAccount->user;
+                $accountNumber = $virtualAccount->account_number;
+                $customerId = $virtualAccount->customer_id;
+            }
         }
-
-        if (!$virtualAccount) {
-            Log::error('Kobopoint Webhook: Virtual account not found in database', ['account_number_field' => $accountNumberField]);
-            throw new \Exception('Virtual account not found: ' . $accountNumberField);
-        }
-
-        $accountNumber = $virtualAccount->account_number;
-        $user = $virtualAccount->user;
 
         if (!$user) {
-            Log::error('Kobopoint Webhook: User not found for virtual account', ['account_number' => $accountNumber]);
-            throw new \Exception('User not found for virtual account');
+            Log::error('Kobopoint Webhook: User/Virtual account not found in database', ['account_number_field' => $accountNumberField]);
+            throw new \Exception('Virtual account not found: ' . $accountNumberField);
         }
 
         $exists = PointWaveTransaction::where('pointwave_transaction_id', $transactionId)->exists();
@@ -158,7 +175,7 @@ class ProcessKobopointWebhook implements ShouldQueue
                 'status' => 'completed',
                 'reference' => 'KBP_' . uniqid(),
                 'pointwave_transaction_id' => $transactionId,
-                'pointwave_customer_id' => $virtualAccount->customer_id,
+                'pointwave_customer_id' => $customerId ?? null,
                 'account_number' => $accountNumber,
                 'description' => 'Deposit via Kobopoint',
                 'metadata' => json_encode(array_merge($this->data, [
