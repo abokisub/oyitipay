@@ -45,15 +45,9 @@ class InvestigateFraud extends Command
             if (!empty($user->phone)) $phones[] = $user->phone;
             if (!empty($user->email)) $emails[] = $user->email;
             if (!empty($user->name)) $names[] = $user->name;
-            // Try common BVN/NIN column names
-            foreach (['bvn', 'bvn_number', 'nin', 'nin_number', 'nin_id'] as $col) {
-                try {
-                    if (!empty($user->$col)) {
-                        if (str_contains($col, 'bvn')) $bvns[] = $user->$col;
-                        if (str_contains($col, 'nin')) $nins[] = $user->$col;
-                    }
-                } catch (\Exception $e) {}
-            }
+            // BVN/NIN
+            try { if (!empty($user->bvn)) $bvns[] = $user->bvn; } catch (\Exception $e) {}
+            try { if (!empty($user->nin)) $nins[] = $user->nin; } catch (\Exception $e) {}
             try {
                 if (!empty($user->ip) || !empty($user->last_login_ip) || !empty($user->register_ip)) {
                     if (!empty($user->ip)) $ips[] = $user->ip;
@@ -81,17 +75,8 @@ class InvestigateFraud extends Command
             if (!empty($deviceIds)) $q->orWhereIn('device_id', $deviceIds);
             if (!empty($phones)) $q->orWhereIn('phone', $phones);
             if (!empty($emails)) $q->orWhereIn('email', $emails);
-            // Try BVN/NIN columns
-            foreach (['bvn', 'bvn_number'] as $col) {
-                if (!empty($bvns)) {
-                    try { $q->orWhereIn($col, $bvns); } catch (\Exception $e) {}
-                }
-            }
-            foreach (['nin', 'nin_number', 'nin_id'] as $col) {
-                if (!empty($nins)) {
-                    try { $q->orWhereIn($col, $nins); } catch (\Exception $e) {}
-                }
-            }
+            if (!empty($bvns)) $q->orWhereIn('bvn', $bvns);
+            if (!empty($nins)) $q->orWhereIn('nin', $nins);
         });
 
         $linkedUsers = $linkedQuery->get();
