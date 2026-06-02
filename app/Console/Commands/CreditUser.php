@@ -29,13 +29,14 @@ class CreditUser extends Command
             // Add an entry in the message table to show up in transactions history
             DB::table('message')->insert([
                 'username' => $user->username,
-                'message' => "Manual Credit: Wallet Funded via Admin (Missing Deposit Recovery)",
+                'message' => "Wallet Funded via Kobopoint (Free Deposit)",
                 'amount' => $amount,
                 'oldbal' => $user->bal,
                 'newbal' => $user->bal + $amount,
-                'type' => 'credit',
-                'status' => 'success',
-                'created_at' => now(),
+                'role' => 'credit',
+                'plan_status' => 1,
+                'habukhan_date' => now(),
+                'transid' => 'MANUAL_' . uniqid(),
             ]);
 
             DB::commit();
