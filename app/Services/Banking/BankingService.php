@@ -176,9 +176,9 @@ class BankingService
             $provider = $this->getActiveProvider();
             $providerSlug = $provider->getProviderSlug();
             
-            // For PointWave, use the 'code' column (primary bank code)
+            // For PointWave and Kobopoint, use the 'code' column (primary bank code)
             // For other providers, use their specific code columns
-            if ($providerSlug === 'pointwave') {
+            if ($providerSlug === 'pointwave' || $providerSlug === 'kobopoint') {
                 return DB::table('unified_banks')
                     ->where('active', true)
                     ->whereNotNull('code')
@@ -239,6 +239,10 @@ class BankingService
      */
     private function resolveBankCode(string $genericCode, string $providerSlug): string
     {
+        if ($providerSlug === 'kobopoint' || $providerSlug === 'pointwave') {
+            return $genericCode;
+        }
+
         $bank = DB::table('unified_banks')->where('code', $genericCode)->first();
         if ($bank && !empty($bank->{ "{$providerSlug}_code"})) {
             return $bank->{ "{$providerSlug}_code"};
