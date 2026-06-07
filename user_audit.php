@@ -101,37 +101,37 @@ echo "Total Unique Linked / Duplicate Accounts Found: " . $linkedAccounts->count
 
 // Helper function to calculate funding and spending
 function getStatsForUser($username, $userId) {
-    // A. Funding In (deposits)
+    // A. Funding In (deposits) - DB uses status = 1 for successful deposit
     $funding = DB::table('deposit')
         ->where('username', $username)
-        ->where('status', 'success')
+        ->where('status', 1)
         ->sum('amount');
 
-    // B. Transfers Out (from transfers table)
+    // B. Transfers Out (from transfers table) - DB uses status = 'SUCCESS'
     $transfersOut = DB::table('transfers')
         ->where('user_id', $userId)
-        ->where('status', 'success')
+        ->where('status', 'SUCCESS')
         ->sum('amount');
 
-    // C. Spending Out (Airtime, Data, Bills, Exams)
+    // C. Spending Out (Airtime, Data, Bills, Exams) - DB uses plan_status = 1
     $airtimeSpend = DB::table('airtime')
         ->where('username', $username)
-        ->where('plan_status', 'success')
+        ->where('plan_status', 1)
         ->sum('amount');
 
     $dataSpend = DB::table('data')
         ->where('username', $username)
-        ->where('plan_status', 'success')
+        ->where('plan_status', 1)
         ->sum('amount');
 
     $billSpend = DB::table('bill')
         ->where('username', $username)
-        ->where('plan_status', 'success')
+        ->where('plan_status', 1)
         ->sum('amount');
 
     $examSpend = DB::table('exam')
         ->where('username', $username)
-        ->where('plan_status', 'success')
+        ->where('plan_status', 1)
         ->sum('amount');
 
     $totalSpend = $airtimeSpend + $dataSpend + $billSpend + $examSpend;
