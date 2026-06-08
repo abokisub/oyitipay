@@ -18,7 +18,6 @@ $user = User::where('username', $targetUsername)->first();
 
 if (!$user) {
     echo "❌ User '$targetUsername' NOT found in the database!\n";
-    // Search for close matches
     $matches = User::where('username', 'like', "%$targetUsername%")
                    ->orWhere('name', 'like', "%$targetUsername%")
                    ->limit(10)
@@ -101,19 +100,16 @@ echo "Total Unique Linked / Duplicate Accounts Found: " . $linkedAccounts->count
 
 // Helper function to calculate funding and spending
 function getStatsForUser($username, $userId) {
-    // A. Funding In (deposits) - DB uses status = 1 for successful deposit
     $funding = DB::table('deposit')
         ->where('username', $username)
         ->where('status', 1)
         ->sum('amount');
 
-    // B. Transfers Out (from transfers table) - DB uses status = 'SUCCESS'
     $transfersOut = DB::table('transfers')
         ->where('user_id', $userId)
         ->where('status', 'SUCCESS')
         ->sum('amount');
 
-    // C. Spending Out (Airtime, Data, Bills, Exams) - DB uses plan_status = 1
     $airtimeSpend = DB::table('airtime')
         ->where('username', $username)
         ->where('plan_status', 1)
@@ -162,9 +158,52 @@ echo "TOTAL SYSTEM SPENDING (Airtime+Data+Bills+Exams): ₦" . number_format($st
 echo "TOTAL OUTFLOW (Transfers + Spending):           ₦" . number_format($stats['transfers'] + $stats['total_spend'], 2) . "\n";
 echo "\n";
 
-// 4. Related Accounts Stats
+// 4. Detailed Deposit (Funding) History
+echo "📥 [4] DETAILED DEPOSIT (FUNDING) HISTORY FOR " . strtoupper($user->username) . "\n";
+echo "--------------------------------------------------------------------\n";
+$deposits = DB::table('deposit')
+    ->where('username', $user->username)
+    ->orderBy('id', 'desc')
+    ->limit(30)
+    ->get();
+
+if ($deposits->count() > 0) {
+    foreach ($deposits as $d) {
+        $statusStr = $d->status == 1 ? "SUCCESS" : "FAILED/PENDING ({$d->status})";
+        echo "- Date:      " . ($d->date ?? 'N/A') . "\n";
+        echo "  Amount:    ₦" . number_format($d->amount, 2) . " (Charges: ₦" . number_format($d->charges, 2) . ")\n";
+        echo "  Bal Change:₦" . number_format($d->oldbal, 2) . " ➔ ₦" . number_format($d->newbal, 2) . "\n";
+        echo "  Method:    " . ($d->type ?? 'N/A') . " (Wallet: " . ($d->wallet_type ?? 'N/A') . ")\n";
+        echo "  Credit By: " . ($d->credit_by ?? 'N/A') . "\n";
+        echo "  Trans ID:  " . ($d->transid ?? 'N/A') . " (Monnify Ref: " . ($d->monify_ref ?? 'N/A') . ")\n";
+        echo "  Status:    " . $statusStr . "\n";
+        echo "  --------------------------------------------------\n";
+    }
+} else {
+    echo "⚠️ No deposit records found for this user in 'deposit' table.\n";
+    
+    // Check if user was manually credited or if there's any mention in the message/logs table
+    $messages = DB::table('message')
+        ->where('username', $user->username)
+        ->where(function($q) {
+            $q->where('role', 'credit')->orWhere('title', 'like', '%credit%')->orWhere('message', 'like', '%credit%');
+        })
+        ->orderBy('id', 'desc')
+        ->limit(10)
+        ->get();
+    
+    if ($messages->count() > 0) {
+        echo "\n🚨 Potential Manual Credits/Logs in 'message' table:\n";
+        foreach ($messages as $msg) {
+            echo "- Date: {$msg->habukhan_date} | Title: {$msg->title} | Amt: ₦{$msg->amount} | Role: {$msg->role} | Text: {$msg->message}\n";
+        }
+    }
+}
+echo "\n";
+
+// 5. Related Accounts Stats
 if ($linkedAccounts->count() > 0) {
-    echo "👥 [4] STATS FOR DETECTED LINKED ACCOUNTS\n";
+    echo "👥 [5] STATS FOR DETECTED LINKED ACCOUNTS\n";
     echo "--------------------------------------------------------------------\n";
     foreach ($linkedAccounts as $linked) {
         $lStats = getStatsForUser($linked->username, $linked->id);
