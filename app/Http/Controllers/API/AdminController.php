@@ -131,7 +131,7 @@ class AdminController extends Controller
                 if ($check_user->count() > 0) {
 
                     $users_info = [
-                        'wallet_balance' => DB::table('user')->sum('bal'),
+                        'wallet_balance' => DB::table('user')->where('status', 1)->sum('bal'),
                         'ref_balance' => DB::table('user')->sum('refbal'),
                         'all_user' => DB::table('user')->count(),
                         'smart_total' => DB::table('user')->where('type', 'SMART')->count(),
