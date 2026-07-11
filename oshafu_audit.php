@@ -41,7 +41,11 @@ echo "💳 [2] VIRTUAL ACCOUNTS CREATED\n";
 if (Schema::hasTable('user_bank')) {
     $banks = DB::table('user_bank')->where('username', $user->username)->get();
     foreach ($banks as $b) {
-        echo "  - Bank: {$b->bank} | Account Name: {$b->account_name} | Account Number: {$b->account_number}\n";
+        $bArr = (array)$b;
+        $bankName = $bArr['bank'] ?? 'N/A';
+        $accNo = $bArr['account_number'] ?? 'N/A';
+        $accName = $bArr['account_name'] ?? ($bArr['name'] ?? 'N/A');
+        echo "  - Bank: {$bankName} | Account Name: {$accName} | Account Number: {$accNo}\n";
     }
 }
 if (Schema::hasTable('pointwave_virtual_accounts')) {
