@@ -7,8 +7,8 @@ $kernel->bootstrap();
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
-// Read username from CLI argument, default to 'sunkingng'
-$targetUsername = isset($argv[1]) ? trim($argv[1]) : 'sunkingng';
+// Read username from CLI argument, default to 'oshafu'
+$targetUsername = isset($argv[1]) ? trim($argv[1]) : 'oshafu';
 
 echo "====================================================================\n";
 echo "🚨 OYITIPAY USER AUDIT REPORT: " . strtoupper($targetUsername) . "\n";
@@ -182,7 +182,6 @@ if ($deposits->count() > 0) {
 } else {
     echo "⚠️ No deposit records found for this user in 'deposit' table.\n";
     
-    // Check if user was manually credited or if there's any mention in the message/logs table
     $messages = DB::table('message')
         ->where('username', $user->username)
         ->where(function($q) {
@@ -201,9 +200,98 @@ if ($deposits->count() > 0) {
 }
 echo "\n";
 
-// 5. Related Accounts Stats
+// 5. Recent Transaction / Spending Logs
+echo "💸 [5] RECENT OUTFLOW TRANSACTION LOGS (LAST 30)\n";
+echo "--------------------------------------------------------------------\n";
+
+$outflows = collect();
+
+// Fetch Airtime
+$airtimes = DB::table('airtime')->where('username', $user->username)->orderBy('id', 'desc')->limit(30)->get()->map(function($item) {
+    return [
+        'date' => $item->plan_date,
+        'type' => 'Airtime (' . strtoupper($item->network) . ')',
+        'details' => $item->plan_phone,
+        'amount' => $item->amount,
+        'status' => $item->plan_status == 1 ? 'SUCCESS' : 'FAILED/PENDING (' . $item->plan_status . ')',
+        'transid' => $item->transid
+    ];
+});
+$outflows = $outflows->concat($airtimes);
+
+// Fetch Data
+$datas = DB::table('data')->where('username', $user->username)->orderBy('id', 'desc')->limit(30)->get()->map(function($item) {
+    return [
+        'date' => $item->plan_date,
+        'type' => 'Data (' . strtoupper($item->network) . ' ' . $item->plan_name . ')',
+        'details' => $item->plan_phone,
+        'amount' => $item->amount,
+        'status' => $item->plan_status == 1 ? 'SUCCESS' : 'FAILED/PENDING (' . $item->plan_status . ')',
+        'transid' => $item->transid
+    ];
+});
+$outflows = $outflows->concat($datas);
+
+// Fetch Bills
+$bills = DB::table('bill')->where('username', $user->username)->orderBy('id', 'desc')->limit(30)->get()->map(function($item) {
+    return [
+        'date' => $item->plan_date,
+        'type' => 'Bill (' . $item->disco_name . ')',
+        'details' => 'Meter: ' . $item->meter_number,
+        'amount' => $item->amount,
+        'status' => $item->plan_status == 1 ? 'SUCCESS' : 'FAILED/PENDING (' . $item->plan_status . ')',
+        'transid' => $item->transid
+    ];
+});
+$outflows = $outflows->concat($bills);
+
+// Fetch Exams
+$exams = DB::table('exam')->where('username', $user->username)->orderBy('id', 'desc')->limit(30)->get()->map(function($item) {
+    return [
+        'date' => $item->plan_date,
+        'type' => 'Exam (' . $item->exam_name . ')',
+        'details' => 'Qty: ' . $item->quantity,
+        'amount' => $item->amount,
+        'status' => $item->plan_status == 1 ? 'SUCCESS' : 'FAILED/PENDING (' . $item->plan_status . ')',
+        'transid' => $item->transid
+    ];
+});
+$outflows = $outflows->concat($exams);
+
+// Fetch Transfers
+$transfers = DB::table('transfers')->where('user_id', $user->id)->orderBy('id', 'desc')->limit(30)->get()->map(function($item) {
+    return [
+        'date' => $item->created_at,
+        'type' => 'Bank Transfer (' . $item->bank_name . ')',
+        'details' => $item->account_number . ' - ' . $item->account_name,
+        'amount' => $item->amount,
+        'status' => $item->status,
+        'transid' => $item->reference
+    ];
+});
+$outflows = $outflows->concat($transfers);
+
+// Sort by date desc
+$sortedOutflows = $outflows->sortByDesc('date')->take(30);
+
+if ($sortedOutflows->count() > 0) {
+    foreach ($sortedOutflows as $o) {
+        echo "- Date:    " . ($o['date'] ?? 'N/A') . "\n";
+        echo "  Type:    " . $o['type'] . "\n";
+        echo "  Details: " . $o['details'] . "\n";
+        echo "  Amount:  ₦" . number_format($o['amount'], 2) . "\n";
+        echo "  Trans ID:" . $o['transid'] . "\n";
+        echo "  Status:  " . $o['status'] . "\n";
+        echo "  --------------------------------------------------\n";
+    }
+} else {
+    echo "ℹ️ No spending transactions found for this user.\n";
+}
+echo "\n";
+
+// 6. Related Accounts Stats
 if ($linkedAccounts->count() > 0) {
-    echo "👥 [5] STATS FOR DETECTED LINKED ACCOUNTS\n";
+    echo "👥 [6] STATS FOR DETECTED LINKED ACCOUNTS\n";
     echo "--------------------------------------------------------------------\n";
     foreach ($linkedAccounts as $linked) {
         $lStats = getStatsForUser($linked->username, $linked->id);
